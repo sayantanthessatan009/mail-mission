@@ -1,0 +1,3467 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MAILMISSION — AI Email Intelligence System</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --nasa-black: #030812;
+      --nasa-deep: #050e1f;
+      --nasa-blue: #0a1628;
+      --accent-cyan: #00d4ff;
+      --accent-orange: #ff6b35;
+      --accent-green: #00ff9f;
+      --accent-red: #ff3366;
+      --accent-yellow: #ffd700;
+      --text-primary: #e8f4fd;
+      --text-secondary: #7aa3c8;
+      --text-dim: #3a5a7a;
+      --grid-line: rgba(0, 212, 255, 0.08);
+      --panel-bg: rgba(5, 14, 31, 0.95);
+      --panel-border: rgba(0, 212, 255, 0.2);
+      --glow-cyan: 0 0 20px rgba(0, 212, 255, 0.4);
+      --glow-orange: 0 0 20px rgba(255, 107, 53, 0.4);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--nasa-black);
+      color: var(--text-primary);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* STARFIELD */
+    #starfield {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      background: radial-gradient(ellipse at 20% 50%, rgba(0, 60, 120, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(0, 30, 80, 0.1) 0%, transparent 50%),
+        var(--nasa-black);
+    }
+
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: white;
+      animation: twinkle var(--dur, 3s) ease-in-out infinite;
+    }
+
+    @keyframes twinkle {
+
+      0%,
+      100% {
+        opacity: var(--min-op, 0.2);
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.3);
+      }
+    }
+
+    /* SCAN LINE OVERLAY */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 212, 255, 0.015) 2px, rgba(0, 212, 255, 0.015) 4px);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* GRID BACKGROUND */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app-wrapper {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      background: linear-gradient(180deg, rgba(0, 212, 255, 0.05) 0%, transparent 100%);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+    }
+
+    .logo-block {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nasa-badge {
+      width: 52px;
+      height: 52px;
+      border: 2px solid var(--accent-cyan);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: var(--glow-cyan), inset 0 0 20px rgba(0, 212, 255, 0.1);
+      animation: rotate-badge 20s linear infinite;
+    }
+
+    @keyframes rotate-badge {
+      from {
+        box-shadow: var(--glow-cyan), inset 0 0 20px rgba(0, 212, 255, 0.1);
+      }
+
+      50% {
+        box-shadow: 0 0 30px rgba(0, 212, 255, 0.7), inset 0 0 20px rgba(0, 212, 255, 0.2);
+      }
+
+      to {
+        box-shadow: var(--glow-cyan), inset 0 0 20px rgba(0, 212, 255, 0.1);
+      }
+    }
+
+    .nasa-badge svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .logo-text h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      background: linear-gradient(90deg, var(--accent-cyan), #fff, var(--accent-cyan));
+      background-size: 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 4s linear infinite;
+      letter-spacing: 4px;
+    }
+
+    @keyframes shimmer {
+      from {
+        background-position: 0%
+      }
+
+      to {
+        background-position: 200%
+      }
+    }
+
+    .logo-text p {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--accent-cyan);
+      letter-spacing: 3px;
+      opacity: 0.7;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border: 1px solid rgba(0, 255, 159, 0.3);
+      border-radius: 20px;
+      background: rgba(0, 255, 159, 0.05);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--accent-green);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1)
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.8)
+      }
+    }
+
+    .clock {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: var(--text-secondary);
+      letter-spacing: 2px;
+    }
+
+    /* ===== MISSION CONTROL BAR ===== */
+    .mission-bar {
+      background: rgba(0, 212, 255, 0.03);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 10px 32px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      overflow-x: auto;
+    }
+
+    .mission-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      min-width: 80px;
+    }
+
+    .mission-stat .val {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .mission-stat .lbl {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .mission-sep {
+      width: 1px;
+      height: 36px;
+      background: var(--panel-border);
+    }
+
+    /* ===== MAIN LAYOUT ===== */
+    main {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 0;
+      min-height: calc(100vh - 140px);
+    }
+
+    /* ===== SIDEBAR ===== */
+    aside {
+      border-right: 1px solid var(--panel-border);
+      background: var(--panel-bg);
+      padding: 20px 0;
+      position: sticky;
+      top: 93px;
+      height: calc(100vh - 93px);
+      overflow-y: auto;
+    }
+
+    aside::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    aside::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    aside::-webkit-scrollbar-thumb {
+      background: var(--panel-border);
+      border-radius: 2px;
+    }
+
+    .sidebar-section {
+      padding: 0 20px;
+      margin-bottom: 24px;
+    }
+
+    .sidebar-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--grid-line);
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .nav-item:hover {
+      background: rgba(0, 212, 255, 0.05);
+      border-color: rgba(0, 212, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: rgba(0, 212, 255, 0.1);
+      border-color: rgba(0, 212, 255, 0.3);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.1);
+    }
+
+    .nav-icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      background: rgba(0, 212, 255, 0.15);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--accent-cyan);
+    }
+
+    .config-field {
+      margin-bottom: 12px;
+    }
+
+    .config-field label {
+      display: block;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+
+    .config-field input,
+    .config-field select {
+      width: 100%;
+      padding: 8px 10px;
+      background: rgba(0, 212, 255, 0.04);
+      border: 1px solid var(--panel-border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+
+    .config-field input:focus,
+    .config-field select:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+    }
+
+    .config-field input[type="password"] {
+      letter-spacing: 3px;
+    }
+
+    .btn-launch {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 150, 200, 0.1));
+      border: 1px solid var(--accent-cyan);
+      border-radius: 6px;
+      color: var(--accent-cyan);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: var(--glow-cyan);
+    }
+
+    .btn-launch:hover {
+      background: rgba(0, 212, 255, 0.2);
+      box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .btn-launch:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ===== CONTENT AREA ===== */
+    .content {
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    /* ===== PANEL ===== */
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .panel-header {
+      padding: 14px 20px;
+      background: linear-gradient(90deg, rgba(0, 212, 255, 0.08), transparent);
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 16px;
+      background: var(--accent-cyan);
+      border-radius: 2px;
+    }
+
+    .panel-body {
+      padding: 20px;
+    }
+
+    /* ===== VIEWS ===== */
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    /* ===== DASHBOARD GRID ===== */
+    .dash-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .dash-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .dash-grid-3 {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+    }
+
+    /* STAT CARDS */
+    .stat-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .stat-card:hover {
+      border-color: var(--accent-cyan);
+      box-shadow: var(--glow-cyan);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-cyan), transparent);
+    }
+
+    .stat-card.orange::before {
+      background: linear-gradient(90deg, var(--accent-orange), transparent);
+    }
+
+    .stat-card.green::before {
+      background: linear-gradient(90deg, var(--accent-green), transparent);
+    }
+
+    .stat-card.red::before {
+      background: linear-gradient(90deg, var(--accent-red), transparent);
+    }
+
+    .stat-card .label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .number {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--accent-cyan);
+      line-height: 1;
+    }
+
+    .stat-card.orange .number {
+      color: var(--accent-orange);
+    }
+
+    .stat-card.green .number {
+      color: var(--accent-green);
+    }
+
+    .stat-card.red .number {
+      color: var(--accent-red);
+    }
+
+    .stat-card .sublabel {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    /* ===== AI STREAM ===== */
+    #ai-stream-container {
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(0, 212, 255, 0.15);
+      border-radius: 6px;
+      padding: 20px;
+      min-height: 200px;
+      max-height: 500px;
+      overflow-y: auto;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text-primary);
+      position: relative;
+    }
+
+    #ai-stream-container::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    #ai-stream-container::-webkit-scrollbar-thumb {
+      background: var(--panel-border);
+    }
+
+    .stream-prefix {
+      color: var(--accent-cyan);
+      font-weight: bold;
+    }
+
+    .stream-thinking {
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    .ai-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 14px;
+      background: var(--accent-cyan);
+      margin-left: 2px;
+      animation: blink 1s step-end infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0
+      }
+    }
+
+    /* ===== EMAIL TABLE ===== */
+    .email-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .email-table th {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--panel-border);
+      text-align: left;
+      background: rgba(0, 212, 255, 0.03);
+    }
+
+    .email-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--grid-line);
+      vertical-align: middle;
+    }
+
+    .email-table tr:hover td {
+      background: rgba(0, 212, 255, 0.04);
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 1px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .tag.inbox {
+      background: rgba(0, 212, 255, 0.1);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+    }
+
+    .tag.sent {
+      background: rgba(0, 255, 159, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(0, 255, 159, 0.3);
+    }
+
+    .tag.draft {
+      background: rgba(255, 107, 53, 0.1);
+      color: var(--accent-orange);
+      border: 1px solid rgba(255, 107, 53, 0.3);
+    }
+
+    .tag.urgent {
+      background: rgba(255, 51, 102, 0.1);
+      color: var(--accent-red);
+      border: 1px solid rgba(255, 51, 102, 0.3);
+    }
+
+    .tag.rfq {
+      background: rgba(255, 215, 0, 0.1);
+      color: var(--accent-yellow);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+    }
+
+    /* ===== PROGRESS / LOADER ===== */
+    .mission-progress {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .progress-ring {
+      margin: 0 auto 16px;
+      width: 80px;
+      height: 80px;
+      position: relative;
+    }
+
+    .progress-ring svg {
+      transform: rotate(-90deg);
+    }
+
+    .progress-ring .track {
+      fill: none;
+      stroke: rgba(0, 212, 255, 0.1);
+      stroke-width: 4;
+    }
+
+    .progress-ring .fill {
+      fill: none;
+      stroke: var(--accent-cyan);
+      stroke-width: 4;
+      stroke-dasharray: 226;
+      stroke-dashoffset: 226;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.5s;
+    }
+
+    .progress-pct {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Orbitron', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .progress-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+      letter-spacing: 2px;
+    }
+
+    /* ===== ACTIONABLE ITEMS ===== */
+    .action-item {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .action-item:hover {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.1);
+    }
+
+    .action-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .priority-badge {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .priority-HIGH {
+      background: var(--accent-red);
+      box-shadow: 0 0 6px rgba(255, 51, 102, 0.6);
+    }
+
+    .priority-MEDIUM {
+      background: var(--accent-yellow);
+      box-shadow: 0 0 6px rgba(255, 215, 0, 0.6);
+    }
+
+    .priority-LOW {
+      background: var(--accent-green);
+      box-shadow: 0 0 6px rgba(0, 255, 159, 0.6);
+    }
+
+    .action-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .action-body {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .action-meta {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    /* ===== EXPORT PANEL ===== */
+    .export-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .export-card {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .export-card:hover {
+      border-color: var(--accent-cyan);
+      box-shadow: var(--glow-cyan);
+      transform: translateY(-2px);
+    }
+
+    .export-icon {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .export-name {
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      letter-spacing: 1px;
+    }
+
+    .export-desc {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* ===== WEEKLY REPORT VIEW ===== */
+    .week-banner {
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(0, 50, 100, 0.1));
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .week-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--accent-cyan);
+      letter-spacing: 3px;
+    }
+
+    .week-range {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* ===== TOAST ===== */
+    #toast {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      background: rgba(5, 14, 31, 0.95);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 8px;
+      padding: 14px 20px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: var(--accent-cyan);
+      z-index: 999;
+      transform: translateX(200px);
+      opacity: 0;
+      transition: all 0.3s;
+      box-shadow: var(--glow-cyan);
+    }
+
+    #toast.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    .content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: var(--panel-border);
+      border-radius: 3px;
+    }
+
+    /* ===== CHART CONTAINER ===== */
+    .chart-wrap {
+      position: relative;
+      height: 200px;
+    }
+
+    /* ===== LOADING OVERLAY ===== */
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 8, 18, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      transition: opacity 0.5s;
+    }
+
+    #loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-logo {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 36px;
+      font-weight: 900;
+      background: linear-gradient(90deg, var(--accent-cyan), #fff, var(--accent-cyan));
+      background-size: 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 2s linear infinite;
+      letter-spacing: 6px;
+      margin-bottom: 24px;
+    }
+
+    .loading-bar-wrap {
+      width: 300px;
+      height: 3px;
+      background: rgba(0, 212, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .loading-bar {
+      height: 100%;
+      background: var(--accent-cyan);
+      width: 0;
+      transition: width 2s ease;
+      border-radius: 3px;
+    }
+
+    .loading-msg {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 12px;
+      letter-spacing: 2px;
+    }
+
+    /* Config fields in sidebar */
+    .sidebar-divider {
+      height: 1px;
+      background: var(--panel-border);
+      margin: 16px 20px;
+    }
+
+    /* Supabase indicator */
+    .db-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      padding: 4px 0;
+    }
+
+    .db-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-red);
+    }
+
+    .db-dot.connected {
+      background: var(--accent-green);
+    }
+
+    /* Thunderbird indicator */
+    .tb-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--text-secondary);
+      padding: 4px 0;
+    }
+
+    /* File input style */
+    .file-upload-area {
+      border: 1px dashed rgba(0, 212, 255, 0.3);
+      border-radius: 6px;
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 10px;
+    }
+
+    .file-upload-area:hover {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 212, 255, 0.04);
+    }
+
+    .file-upload-area label {
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .file-upload-area input {
+      display: none;
+    }
+
+    /* Collapsible email detail */
+    .email-detail {
+      display: none;
+      padding: 12px 14px;
+      background: rgba(0, 0, 0, 0.3);
+      border-top: 1px solid var(--grid-line);
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .email-detail.open {
+      display: block;
+    }
+
+    .email-detail::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .email-detail::-webkit-scrollbar-thumb {
+      background: var(--panel-border);
+    }
+
+    tr.clickable {
+      cursor: pointer;
+    }
+
+    .summary-block {
+      background: rgba(0, 255, 159, 0.04);
+      border: 1px solid rgba(0, 255, 159, 0.15);
+      border-radius: 6px;
+      padding: 14px;
+      margin-top: 10px;
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--text-secondary);
+    }
+
+    .summary-block .summary-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: var(--accent-green);
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+
+    /* === SETUP GUIDE === */
+    .setup-step {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+    }
+
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .step-content h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .step-content p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .step-content code {
+      display: inline-block;
+      background: rgba(0, 212, 255, 0.08);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 3px;
+      padding: 1px 6px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--accent-cyan);
+      margin: 2px 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="starfield"></div>
+
+  <!-- LOADING SCREEN -->
+  <div id="loading-overlay">
+    <div class="loading-logo">MAILMISSION</div>
+    <div
+      style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:3px;margin-bottom:20px;">
+      AI EMAIL INTELLIGENCE SYSTEM</div>
+    <div class="loading-bar-wrap">
+      <div class="loading-bar" id="loading-bar"></div>
+    </div>
+    <div class="loading-msg" id="loading-msg">INITIALIZING SYSTEMS...</div>
+  </div>
+
+  <div class="app-wrapper">
+
+    <!-- HEADER -->
+    <header>
+      <div class="logo-block">
+        <div class="nasa-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 2a10 10 0 0 1 0 20M2 12h20" />
+            <path d="M12 2C8 7 8 17 12 22M12 2c4 5 4 15 0 20" />
+          </svg>
+        </div>
+        <div class="logo-text">
+          <h1>MAILMISSION</h1>
+          <p>AI EMAIL INTELLIGENCE SYSTEM · PRECISION SPARES MFG CO</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <div class="db-indicator" id="db-status">
+          <div class="db-dot" id="db-dot"></div>
+          <span id="db-text">SUPABASE: OFFLINE</span>
+        </div>
+        <div class="status-pill">
+          <div class="pulse-dot"></div>
+          <span id="system-status">READY</span>
+        </div>
+        <div class="clock" id="clock"></div>
+      </div>
+    </header>
+
+    <!-- MISSION CONTROL STATS BAR -->
+    <div class="mission-bar">
+      <div class="mission-stat">
+        <div class="val" id="stat-total">0</div>
+        <div class="lbl">TOTAL MAIL</div>
+      </div>
+      <div class="mission-sep"></div>
+      <div class="mission-stat">
+        <div class="val" id="stat-inbox" style="color:var(--accent-cyan)">0</div>
+        <div class="lbl">INBOX</div>
+      </div>
+      <div class="mission-sep"></div>
+      <div class="mission-stat">
+        <div class="val" id="stat-sent" style="color:var(--accent-green)">0</div>
+        <div class="lbl">SENT</div>
+      </div>
+      <div class="mission-sep"></div>
+      <div class="mission-stat">
+        <div class="val" id="stat-rfq" style="color:var(--accent-yellow)">0</div>
+        <div class="lbl">RFQs</div>
+      </div>
+      <div class="mission-sep"></div>
+      <div class="mission-stat">
+        <div class="val" id="stat-urgent" style="color:var(--accent-red)">0</div>
+        <div class="lbl">URGENT</div>
+      </div>
+      <div class="mission-sep"></div>
+      <div class="mission-stat">
+        <div class="val" id="stat-contacts">0</div>
+        <div class="lbl">CONTACTS</div>
+      </div>
+      <div class="mission-sep"></div>
+      <div class="mission-stat">
+        <div class="val" id="stat-week">WEEK 11</div>
+        <div class="lbl">CURRENT</div>
+      </div>
+    </div>
+
+    <!-- MAIN LAYOUT -->
+    <main>
+
+      <!-- SIDEBAR -->
+      <aside>
+        <div class="sidebar-section">
+          <div class="sidebar-label">Navigation</div>
+          <div class="nav-item active" onclick="switchView('dashboard')" id="nav-dashboard">
+            <span class="nav-icon">⬡</span> DASHBOARD
+          </div>
+          <div class="nav-item" onclick="switchView('emails')" id="nav-emails">
+            <span class="nav-icon">✉</span> EMAIL DATASET
+            <span class="nav-badge" id="badge-emails">0</span>
+          </div>
+          <div class="nav-item" onclick="switchView('ai')" id="nav-ai">
+            <span class="nav-icon">◈</span> AI ANALYSIS
+          </div>
+          <div class="nav-item" onclick="switchView('actions')" id="nav-actions">
+            <span class="nav-icon">▲</span> ACTIONABLES
+            <span class="nav-badge" id="badge-actions">0</span>
+          </div>
+          <div class="nav-item" onclick="switchView('weekly')" id="nav-weekly">
+            <span class="nav-icon">◉</span> WEEKLY REPORT
+          </div>
+          <div class="nav-item" onclick="switchView('exports')" id="nav-exports">
+            <span class="nav-icon">⬇</span> EXPORT FILES
+          </div>
+          <div class="nav-item" onclick="switchView('history')" id="nav-history">
+            <span class="nav-icon">◷</span> HISTORY
+            <span class="nav-badge" id="badge-history">0</span>
+          </div>
+          <div class="nav-item" onclick="switchView('setup')" id="nav-setup">
+            <span class="nav-icon">⚙</span> SETUP GUIDE
+          </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-label">Data Source</div>
+          <div class="file-upload-area">
+            <label>
+              <input type="file" id="csv-upload" accept=".csv" />
+              📂 Load Thunderbird CSV Export<br />
+              <span style="font-size:10px;color:var(--text-dim)">messages.csv from profile folder</span>
+            </label>
+          </div>
+          <div class="tb-indicator">
+            <span>🦅</span>
+            <span id="tb-status">THUNDERBIRD: MANUAL MODE</span>
+          </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-label">GROQ API Config</div>
+          <div class="config-field">
+            <label>GROQ API KEY</label>
+            <input type="password" id="groq-key" placeholder="gsk_xxxxxxxxxxxx" />
+          </div>
+          <div class="config-field">
+            <label>AI MODEL</label>
+            <select id="groq-model">
+              <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Best)</option>
+              <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fast)</option>
+              <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-label">Supabase Config</div>
+          <div class="config-field">
+            <label>PROJECT URL</label>
+            <input type="text" id="sb-url" placeholder="https://xxx.supabase.co" />
+          </div>
+          <div class="config-field">
+            <label>ANON KEY</label>
+            <input type="password" id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIs..." />
+          </div>
+          <button class="btn-launch" onclick="connectSupabase()">⬡ CONNECT SUPABASE</button>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-section">
+          <button class="btn-launch" onclick="runFullAnalysis()" id="btn-analyze" style="margin-bottom:8px;">
+            ◈ LAUNCH AI ANALYSIS
+          </button>
+          <button class="btn-launch" onclick="backupWeekToSupabase()"
+            style="background:rgba(255,107,53,0.1);border-color:var(--accent-orange);color:var(--accent-orange);margin-bottom:8px;">
+            ⬆ BACKUP WEEK TO DB
+          </button>
+          <button class="btn-launch" onclick="fetchWeekListFromSupabase()"
+            style="background:rgba(0,255,159,0.07);border-color:var(--accent-green);color:var(--accent-green);">
+            ◷ LOAD FROM SUPABASE
+          </button>
+        </div>
+      </aside>
+
+      <!-- CONTENT -->
+      <div class="content">
+
+        <!-- === DASHBOARD VIEW === -->
+        <div class="view active" id="view-dashboard">
+          <div class="dash-grid">
+            <div class="stat-card">
+              <div class="label">Total Emails This Week</div>
+              <div class="number" id="d-total">—</div>
+              <div class="sublabel">Loaded from dataset</div>
+            </div>
+            <div class="stat-card orange">
+              <div class="label">Sent / Outbound</div>
+              <div class="number" id="d-sent">—</div>
+              <div class="sublabel">From your address</div>
+            </div>
+            <div class="stat-card green">
+              <div class="label">Inbox / Received</div>
+              <div class="number" id="d-inbox">—</div>
+              <div class="sublabel">To your address</div>
+            </div>
+            <div class="stat-card red">
+              <div class="label">Urgent / Action Req</div>
+              <div class="number" id="d-urgent">—</div>
+              <div class="sublabel">Needs immediate response</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">RFQ Emails</div>
+              <div class="number" id="d-rfq" style="color:var(--accent-yellow)">—</div>
+              <div class="sublabel">Quotation requests</div>
+            </div>
+            <div class="stat-card green">
+              <div class="label">Unique Contacts</div>
+              <div class="number" id="d-contacts">—</div>
+              <div class="sublabel">Organizations in thread</div>
+            </div>
+          </div>
+
+          <div class="dash-grid-3">
+            <div class="panel">
+              <div class="panel-header">
+                <div class="panel-title">DAILY EMAIL VOLUME</div>
+              </div>
+              <div class="panel-body">
+                <div class="chart-wrap"><canvas id="chart-volume"></canvas></div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-header">
+                <div class="panel-title">EMAIL BREAKDOWN</div>
+              </div>
+              <div class="panel-body">
+                <div class="chart-wrap"><canvas id="chart-breakdown"></canvas></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">TOP CONTACTS THIS WEEK</div>
+            </div>
+            <div class="panel-body">
+              <table class="email-table" id="top-contacts-table">
+                <thead>
+                  <tr>
+                    <th>CONTACT</th>
+                    <th>ORGANIZATION</th>
+                    <th>EMAILS</th>
+                    <th>LAST DATE</th>
+                  </tr>
+                </thead>
+                <tbody id="top-contacts-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">AI QUICK SUMMARY</div>
+            </div>
+            <div class="panel-body">
+              <div id="quick-summary" style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
+                <span style="color:var(--text-dim);font-family:'Share Tech Mono',monospace;">Load CSV data and run AI
+                  Analysis to see your intelligent summary here...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === EMAIL DATASET VIEW === -->
+        <div class="view" id="view-emails">
+          <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
+            <input id="email-search" type="text" placeholder="🔍 Search emails, subjects, contacts..."
+              style="flex:1;min-width:200px;padding:10px 14px;background:rgba(0,212,255,0.04);border:1px solid var(--panel-border);border-radius:6px;color:var(--text-primary);font-family:'Share Tech Mono',monospace;font-size:12px;"
+              oninput="filterEmails()" />
+            <select id="email-filter" onchange="filterEmails()"
+              style="padding:10px 14px;background:rgba(0,212,255,0.04);border:1px solid var(--panel-border);border-radius:6px;color:var(--text-primary);font-family:'Share Tech Mono',monospace;font-size:11px;">
+              <option value="all">ALL</option>
+              <option value="inbox">INBOX</option>
+              <option value="sent">SENT</option>
+              <option value="rfq">RFQ</option>
+              <option value="urgent">URGENT</option>
+            </select>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">EMAIL DATASET</div>
+              <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim)"
+                id="email-count-label">0 emails</span>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="email-table">
+                <thead>
+                  <tr>
+                    <th>TYPE</th>
+                    <th>DATE</th>
+                    <th>FROM</th>
+                    <th>TO</th>
+                    <th>SUBJECT</th>
+                  </tr>
+                </thead>
+                <tbody id="email-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- === AI ANALYSIS VIEW === -->
+        <div class="view" id="view-ai">
+          <div class="panel" style="margin-bottom:20px;">
+            <div class="panel-header">
+              <div class="panel-title">AI MISSION CONTROL — GROQ STREAMING</div>
+              <div style="display:flex;gap:8px;">
+                <button onclick="runFullAnalysis()" class="btn-launch"
+                  style="padding:6px 14px;font-size:10px;width:auto;">▶ ANALYZE</button>
+                <button onclick="document.getElementById('ai-stream-container').innerHTML=''" class="btn-launch"
+                  style="padding:6px 14px;font-size:10px;width:auto;background:rgba(255,51,102,0.1);border-color:var(--accent-red);color:var(--accent-red);">✕
+                  CLEAR</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div id="ai-stream-container">
+                <span class="stream-thinking">[ Awaiting mission parameters... Load CSV data and configure GROQ API key,
+                  then click LAUNCH AI ANALYSIS ]</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" id="ai-categories-panel" style="display:none;">
+            <div class="panel-header">
+              <div class="panel-title">CLASSIFIED INTELLIGENCE</div>
+            </div>
+            <div class="panel-body" id="ai-categories-body"></div>
+          </div>
+        </div>
+
+        <!-- === ACTIONABLES VIEW === -->
+        <div class="view" id="view-actions">
+          <div class="panel" style="margin-bottom:20px;">
+            <div class="panel-header">
+              <div class="panel-title">MISSION-CRITICAL ACTIONABLES</div>
+              <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent-red)"
+                id="action-count-label">Run AI analysis first</span>
+            </div>
+            <div class="panel-body">
+              <div id="actionables-container">
+                <div
+                  style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text-dim);text-align:center;padding:40px;">
+                  [ NO ACTIONABLES LOADED — RUN AI ANALYSIS ]
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === WEEKLY REPORT VIEW === -->
+        <div class="view" id="view-weekly">
+          <div class="week-banner">
+            <div>
+              <div class="week-title">WEEKLY INTELLIGENCE REPORT</div>
+              <div class="week-range" id="week-range">Mar 03 – Mar 11, 2026 · Week 11</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);">SUPABASE BACKUP
+              </div>
+              <div id="backup-status"
+                style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--accent-red);">NOT BACKED UP
+              </div>
+            </div>
+          </div>
+
+          <div class="dash-grid">
+            <div class="stat-card">
+              <div class="label">Week Emails</div>
+              <div class="number" id="wr-total">—</div>
+            </div>
+            <div class="stat-card orange">
+              <div class="label">Sent</div>
+              <div class="number" id="wr-sent">—</div>
+            </div>
+            <div class="stat-card green">
+              <div class="label">Received</div>
+              <div class="number" id="wr-received">—</div>
+            </div>
+            <div class="stat-card red">
+              <div class="label">Urgent</div>
+              <div class="number" id="wr-urgent">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">RFQs</div>
+              <div class="number" id="wr-rfq" style="color:var(--accent-yellow)">—</div>
+            </div>
+            <div class="stat-card green">
+              <div class="label">Contacts</div>
+              <div class="number" id="wr-contacts">—</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">EXECUTIVE SUMMARY</div>
+            </div>
+            <div class="panel-body">
+              <div id="weekly-summary-body" style="font-size:13px;line-height:1.9;color:var(--text-secondary);">
+                Run AI Analysis to generate the weekly executive summary...
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">TOP THREADS THIS WEEK</div>
+            </div>
+            <div class="panel-body">
+              <table class="email-table">
+                <thead>
+                  <tr>
+                    <th>SUBJECT</th>
+                    <th>PARTY</th>
+                    <th>TYPE</th>
+                    <th>DATE</th>
+                  </tr>
+                </thead>
+                <tbody id="weekly-threads-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- === EXPORTS VIEW === -->
+        <div class="view" id="view-exports">
+          <div class="panel" style="margin-bottom:20px;">
+            <div class="panel-header">
+              <div class="panel-title">MISSION EXPORT CENTER</div>
+            </div>
+            <div class="panel-body">
+              <div class="export-grid">
+                <div class="export-card" onclick="exportXLSX()">
+                  <div class="export-icon">📊</div>
+                  <div class="export-name">EMAIL DATASET</div>
+                  <div class="export-desc">Full email data as Excel XLSX with formatting</div>
+                </div>
+                <div class="export-card" onclick="exportActionablesPDF()">
+                  <div class="export-icon">📋</div>
+                  <div class="export-name">ACTIONABLES PDF</div>
+                  <div class="export-desc">AI-generated action items as formatted PDF</div>
+                </div>
+                <div class="export-card" onclick="exportWeeklyReportPDF()">
+                  <div class="export-icon">📄</div>
+                  <div class="export-name">WEEKLY REPORT PDF</div>
+                  <div class="export-desc">Full weekly intelligence report PDF</div>
+                </div>
+                <div class="export-card" onclick="exportUserManualDOCX()">
+                  <div class="export-icon">📘</div>
+                  <div class="export-name">USER MANUAL</div>
+                  <div class="export-desc">System user manual as Word document</div>
+                </div>
+                <div class="export-card" onclick="exportEmailSummariesPDF()">
+                  <div class="export-icon">📑</div>
+                  <div class="export-name">EMAIL SUMMARIES PDF</div>
+                  <div class="export-desc">Individual email AI summaries (top 20)</div>
+                </div>
+                <div class="export-card" onclick="exportFullZip()">
+                  <div class="export-icon">🗜️</div>
+                  <div class="export-name">FULL ZIP PACKAGE</div>
+                  <div class="export-desc">Download all files as one ZIP folder</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">EXPORT LOG</div>
+            </div>
+            <div class="panel-body">
+              <div id="export-log"
+                style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-secondary);line-height:2;">
+                [ AWAITING EXPORT COMMANDS ]
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === SETUP GUIDE VIEW === -->
+        <div class="view" id="view-setup">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">SETUP & INTEGRATION GUIDE</div>
+            </div>
+            <div class="panel-body">
+
+              <div
+                style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:6px;padding:16px;margin-bottom:20px;">
+                <div
+                  style="font-family:'Orbitron',monospace;font-size:12px;font-weight:700;color:var(--accent-cyan);letter-spacing:2px;margin-bottom:8px;">
+                  SYSTEM ARCHITECTURE</div>
+                <div style="font-size:12px;color:var(--text-secondary);line-height:1.9;">
+                  <strong style="color:var(--text-primary)">Thunderbird</strong> → Export CSV → <strong
+                    style="color:var(--accent-cyan)">MailMission App</strong> → <strong
+                    style="color:var(--accent-orange)">GROQ AI</strong> (Streaming Analysis) → <strong
+                    style="color:var(--accent-green)">Supabase</strong> (Weekly Backup) → <strong
+                    style="color:var(--accent-yellow)">Export Files</strong> (PDF/XLSX/DOCX/ZIP)
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                  <h4>Export Emails from Thunderbird</h4>
+                  <p>In Thunderbird, install the <strong>ImportExportTools NG</strong> add-on. Then right-click your
+                    inbox/sent folder → ImportExportTools NG → Export all messages in folder → CSV format.<br />
+                    Save as <code>messages.csv</code> and load it using the sidebar button in this app.<br />
+                    <strong>Columns expected:</strong> Subject, From, To, Date, (empty), Size, Body
+                  </p>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                  <h4>Configure GROQ API</h4>
+                  <p>Get your free API key from <code>console.groq.com</code>.<br />
+                    Paste it in the sidebar under GROQ API Config. Select model <code>llama-3.3-70b-versatile</code> for
+                    best results.<br />
+                    The app uses streaming so you see analysis appear in real-time.</p>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                  <h4>Set Up Supabase (Weekly Backup)</h4>
+                  <p>Create a free project at <code>supabase.com</code>. Get your Project URL and anon key from Settings
+                    → API.<br />
+                    Run this SQL in Supabase SQL Editor to create the backup table:</p>
+                  <pre
+                    style="background:rgba(0,0,0,0.5);border:1px solid var(--panel-border);border-radius:4px;padding:12px;margin-top:8px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent-green);overflow-x:auto;">CREATE TABLE weekly_email_backups (
+  id SERIAL PRIMARY KEY,
+  week_number INTEGER NOT NULL,
+  week_year INTEGER NOT NULL,
+  week_label TEXT,
+  backup_date TIMESTAMPTZ DEFAULT NOW(),
+  email_count INTEGER,
+  sent_count INTEGER,
+  received_count INTEGER,
+  rfq_count INTEGER,
+  urgent_count INTEGER,
+  top_contacts JSONB,
+  ai_summary TEXT,
+  actionables JSONB,
+  raw_data JSONB
+);</pre>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="step-num">4</div>
+                <div class="step-content">
+                  <h4>Daily Automation (Windows Task Scheduler)</h4>
+                  <p>To run the export automatically every day, create a batch file <code>run_mailmission.bat</code>:
+                  </p>
+                  <pre
+                    style="background:rgba(0,0,0,0.5);border:1px solid var(--panel-border);border-radius:4px;padding:12px;margin-top:8px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent-green);overflow-x:auto;">@echo off
+REM Export Thunderbird messages via ImportExportTools CLI
+REM Open MailMission in browser
+start "" "C:\path\to\mailmission\index.html"</pre>
+                  <p style="margin-top:8px;">Schedule in Task Scheduler to run daily at 8:00 AM. Each Monday, click
+                    "BACKUP WEEK TO DB" to archive previous week's data to Supabase.</p>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="step-num">5</div>
+                <div class="step-content">
+                  <h4>Yahoo Mail + Thunderbird IMAP Setup</h4>
+                  <p><strong>Server:</strong> <code>imap.mail.yahoo.com</code> · Port <code>993</code> · SSL<br />
+                    <strong>SMTP:</strong> <code>smtp.mail.yahoo.com</code> · Port <code>465</code> · SSL<br />
+                    <strong>Password:</strong> Use your Yahoo App Password (not your regular password)<br />
+                    In Thunderbird: Account Settings → Server Settings → make sure IMAP is selected and auto-check
+                    interval is set.
+                  </p>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="step-num">6</div>
+                <div class="step-content">
+                  <h4>Weekly Cycle Flow</h4>
+                  <p>
+                    <strong>Every day:</strong> Export today's emails → Load CSV → Run AI Analysis → Review
+                    actionables<br />
+                    <strong>Every Monday:</strong> Click "BACKUP WEEK TO DB" → System archives previous week to Supabase
+                    → App resets for new week<br />
+                    <strong>Export:</strong> Go to Export Center → Download XLSX, PDFs, DOCX, or full ZIP package
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- === HISTORY VIEW === -->
+        <div class="view" id="view-history">
+
+          <!-- Top bar -->
+          <div
+            style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+            <div>
+              <div
+                style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:var(--accent-cyan);letter-spacing:3px;">
+                MISSION ARCHIVE</div>
+              <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:3px;">
+                PAST WEEKS RESTORED FROM SUPABASE</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <button onclick="fetchWeekListFromSupabase()" class="btn-launch"
+                style="padding:8px 16px;font-size:10px;width:auto;">⟳ REFRESH LIST</button>
+              <button onclick="clearHistoryView()" class="btn-launch"
+                style="padding:8px 16px;font-size:10px;width:auto;background:rgba(255,51,102,0.08);border-color:var(--accent-red);color:var(--accent-red);">✕
+                CLEAR VIEW</button>
+            </div>
+          </div>
+
+          <!-- Week selector cards -->
+          <div id="history-week-cards" style="margin-bottom:20px;">
+            <div
+              style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text-dim);text-align:center;padding:40px;border:1px dashed rgba(0,212,255,0.15);border-radius:8px;">
+              [ CONNECT SUPABASE AND CLICK "LOAD FROM SUPABASE" TO SEE ARCHIVED WEEKS ]
+            </div>
+          </div>
+
+          <!-- Compare toggle -->
+          <div id="history-compare-bar" style="display:none;margin-bottom:16px;">
+            <div
+              style="background:rgba(0,212,255,0.05);border:1px solid var(--panel-border);border-radius:8px;padding:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+              <div
+                style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent-cyan);letter-spacing:2px;">
+                WEEK COMPARISON</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="compare-week-a"
+                  style="padding:6px 10px;background:rgba(0,212,255,0.04);border:1px solid var(--panel-border);border-radius:4px;color:var(--text-primary);font-family:'Share Tech Mono',monospace;font-size:11px;"></select>
+                <span style="color:var(--text-dim);font-family:'Share Tech Mono',monospace;">VS</span>
+                <select id="compare-week-b"
+                  style="padding:6px 10px;background:rgba(0,212,255,0.04);border:1px solid var(--panel-border);border-radius:4px;color:var(--text-primary);font-family:'Share Tech Mono',monospace;font-size:11px;"></select>
+                <button onclick="runComparison()" class="btn-launch"
+                  style="padding:6px 14px;font-size:10px;width:auto;">⬡ COMPARE</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comparison result -->
+          <div id="history-compare-result" style="display:none;margin-bottom:20px;"></div>
+
+          <!-- Loaded week detail -->
+          <div id="history-detail" style="display:none;">
+
+            <div class="week-banner" style="margin-bottom:16px;">
+              <div>
+                <div class="week-title" id="hist-week-title">—</div>
+                <div class="week-range" id="hist-week-range">—</div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button onclick="restoreWeekToMain()" class="btn-launch"
+                  style="padding:8px 18px;font-size:10px;width:auto;background:rgba(0,255,159,0.1);border-color:var(--accent-green);color:var(--accent-green);">
+                  ↩ RESTORE TO DASHBOARD
+                </button>
+                <button onclick="rerunAIOnHistory()" class="btn-launch"
+                  style="padding:8px 18px;font-size:10px;width:auto;">
+                  ◈ RE-RUN AI ON THIS WEEK
+                </button>
+              </div>
+            </div>
+
+            <!-- Stats row -->
+            <div class="dash-grid" style="margin-bottom:16px;">
+              <div class="stat-card">
+                <div class="label">Total Emails</div>
+                <div class="number" id="hist-total">—</div>
+              </div>
+              <div class="stat-card orange">
+                <div class="label">Sent</div>
+                <div class="number" id="hist-sent">—</div>
+              </div>
+              <div class="stat-card green">
+                <div class="label">Received</div>
+                <div class="number" id="hist-received">—</div>
+              </div>
+              <div class="stat-card red">
+                <div class="label">Urgent</div>
+                <div class="number" id="hist-urgent">—</div>
+              </div>
+              <div class="stat-card">
+                <div class="label">RFQ</div>
+                <div class="number" id="hist-rfq" style="color:var(--accent-yellow)">—</div>
+              </div>
+              <div class="stat-card green">
+                <div class="label">Backed Up</div>
+                <div class="number" id="hist-backup-date" style="font-size:13px;margin-top:4px;">—</div>
+              </div>
+            </div>
+
+            <!-- Tabs -->
+            <div style="display:flex;gap:4px;margin-bottom:16px;" id="hist-tabs">
+              <button class="hist-tab active" onclick="switchHistTab('emails')" id="hist-tab-emails"
+                style="padding:8px 16px;background:rgba(0,212,255,0.1);border:1px solid var(--accent-cyan);border-radius:4px;color:var(--accent-cyan);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:1px;">
+                EMAILS
+              </button>
+              <button class="hist-tab" onclick="switchHistTab('summary')" id="hist-tab-summary"
+                style="padding:8px 16px;background:rgba(0,0,0,0.3);border:1px solid var(--panel-border);border-radius:4px;color:var(--text-secondary);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:1px;">
+                AI SUMMARY
+              </button>
+              <button class="hist-tab" onclick="switchHistTab('actions')" id="hist-tab-actions"
+                style="padding:8px 16px;background:rgba(0,0,0,0.3);border:1px solid var(--panel-border);border-radius:4px;color:var(--text-secondary);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:1px;">
+                ACTIONABLES
+              </button>
+            </div>
+
+            <!-- Emails tab -->
+            <div id="hist-pane-emails">
+              <div style="display:flex;gap:10px;margin-bottom:12px;">
+                <input id="hist-search" type="text" placeholder="🔍 Search archived emails..."
+                  style="flex:1;padding:8px 12px;background:rgba(0,212,255,0.04);border:1px solid var(--panel-border);border-radius:6px;color:var(--text-primary);font-family:'Share Tech Mono',monospace;font-size:11px;"
+                  oninput="filterHistEmails()" />
+                <select id="hist-filter" onchange="filterHistEmails()"
+                  style="padding:8px 12px;background:rgba(0,212,255,0.04);border:1px solid var(--panel-border);border-radius:6px;color:var(--text-primary);font-family:'Share Tech Mono',monospace;font-size:11px;">
+                  <option value="all">ALL</option>
+                  <option value="sent">SENT</option>
+                  <option value="inbox">INBOX</option>
+                  <option value="rfq">RFQ</option>
+                  <option value="urgent">URGENT</option>
+                </select>
+              </div>
+              <div class="panel">
+                <div class="panel-header">
+                  <div class="panel-title">ARCHIVED EMAILS</div>
+                  <span id="hist-email-count"
+                    style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);">0
+                    emails</span>
+                </div>
+                <div style="overflow-x:auto;">
+                  <table class="email-table">
+                    <thead>
+                      <tr>
+                        <th>TYPE</th>
+                        <th>DATE</th>
+                        <th>FROM</th>
+                        <th>TO</th>
+                        <th>SUBJECT</th>
+                      </tr>
+                    </thead>
+                    <tbody id="hist-email-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Summary tab -->
+            <div id="hist-pane-summary" style="display:none;">
+              <div class="panel">
+                <div class="panel-header">
+                  <div class="panel-title">ARCHIVED AI SUMMARY</div>
+                </div>
+                <div class="panel-body">
+                  <div id="hist-summary-body"
+                    style="font-family:'Share Tech Mono',monospace;font-size:12px;line-height:1.9;color:var(--text-secondary);white-space:pre-wrap;max-height:600px;overflow-y:auto;">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actionables tab -->
+            <div id="hist-pane-actions" style="display:none;">
+              <div class="panel">
+                <div class="panel-header">
+                  <div class="panel-title">ARCHIVED ACTIONABLES</div>
+                </div>
+                <div class="panel-body" id="hist-actions-body">
+                  <div
+                    style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text-dim);text-align:center;padding:20px;">
+                    No actionables stored for this week.</div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- end history-detail -->
+        </div><!-- end view-history -->
+
+      </div><!-- end content -->
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // ===== GLOBAL STATE =====
+    let allEmails = [];
+    let filteredEmails = [];
+    let actionables = [];
+    let aiSummary = '';
+    let supabaseClient = null;
+    let charts = {};
+    let currentWeek = getWeekNumber(new Date());
+    let currentYear = new Date().getFullYear();
+
+    // ===== STARS =====
+    (function createStars() {
+      const sf = document.getElementById('starfield');
+      for (let i = 0; i < 180; i++) {
+        const s = document.createElement('div');
+        s.className = 'star';
+        const size = Math.random() * 2.5 + 0.5;
+        s.style.cssText = `
+      left:${Math.random() * 100}%;top:${Math.random() * 100}%;
+      width:${size}px;height:${size}px;
+      --dur:${2 + Math.random() * 4}s;
+      --min-op:${0.1 + Math.random() * 0.3};
+      animation-delay:${Math.random() * 4}s;
+    `;
+        sf.appendChild(s);
+      }
+    })();
+
+    // ===== CLOCK =====
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent =
+        now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+    }
+    updateClock(); setInterval(updateClock, 1000);
+
+    // ===== LOADING =====
+    window.addEventListener('load', () => {
+      const bar = document.getElementById('loading-bar');
+      const msg = document.getElementById('loading-msg');
+      const msgs = ['INITIALIZING SYSTEMS...', 'LOADING STAR CHARTS...', 'CALIBRATING AI SENSORS...', 'ESTABLISHING LINK...', 'MISSION READY'];
+      let i = 0;
+      const interval = setInterval(() => {
+        bar.style.width = ((i + 1) / msgs.length * 100) + '%';
+        msg.textContent = msgs[i];
+        i++;
+        if (i >= msgs.length) {
+          clearInterval(interval);
+          setTimeout(() => document.getElementById('loading-overlay').classList.add('hidden'), 500);
+        }
+      }, 350);
+    });
+
+    // ===== NAVIGATION =====
+    function switchView(name) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('view-' + name).classList.add('active');
+      document.getElementById('nav-' + name).classList.add('active');
+    }
+
+    // ===== TOAST =====
+    function showToast(msg, duration = 3000) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), duration);
+    }
+
+    // ===== WEEK NUMBER =====
+    function getWeekNumber(d) {
+      const date = new Date(d); date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() + 4 - (date.getDay() || 7));
+      const yearStart = new Date(date.getFullYear(), 0, 1);
+      return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+    }
+
+    // ===== CSV LOADER =====
+    document.getElementById('csv-upload').addEventListener('change', function (e) {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        parseCSV(ev.target.result);
+      };
+      reader.readAsText(file, 'utf-8');
+    });
+
+    function parseCSV(text) {
+      const rows = [];
+      let inQuotes = false, field = '', row = [];
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i], next = text[i + 1];
+        if (c === '"') {
+          if (inQuotes && next === '"') { field += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if (c === ',' && !inQuotes) {
+          row.push(field); field = '';
+        } else if ((c === '\n' || (c === '\r' && next === '\n')) && !inQuotes) {
+          row.push(field); field = '';
+          if (row.some(f => f.trim())) rows.push(row);
+          row = []; if (c === '\r') i++;
+        } else { field += c; }
+      }
+      if (field || row.length) { row.push(field); if (row.some(f => f.trim())) rows.push(row); }
+
+      allEmails = rows.map((r, idx) => ({
+        id: idx,
+        subject: (r[0] || '').trim(),
+        from: (r[1] || '').trim(),
+        to: (r[2] || '').trim(),
+        date: (r[3] || '').trim(),
+        size: (r[5] || '').trim(),
+        body: (r[6] || '').trim(),
+        type: detectType(r),
+        category: detectCategory(r),
+        isUrgent: detectUrgent(r)
+      }));
+
+      filteredEmails = [...allEmails];
+      updateStats();
+      renderEmailTable();
+      renderTopContacts();
+      renderWeeklyView();
+      renderCharts();
+      showToast(`✓ Loaded ${allEmails.length} emails from dataset`);
+    }
+
+    function detectType(r) {
+      const from = (r[1] || '').toLowerCase();
+      const to = (r[2] || '').toLowerCase();
+      const myAddr = 'precision.spares@yahoo';
+      if (from.includes(myAddr)) return 'sent';
+      return 'inbox';
+    }
+
+    function detectCategory(r) {
+      const subj = (r[0] || '').toLowerCase();
+      const body = (r[6] || '').toLowerCase();
+      if (subj.includes('rfq') || subj.includes('quotation') || subj.includes('quote') || body.includes('request for quotation')) return 'rfq';
+      if (subj.includes('urgent') || subj.includes('asap') || subj.includes('immediately') || subj.includes('deadline')) return 'urgent';
+      if (subj.includes('invoice') || subj.includes('payment') || subj.includes('po ') || subj.includes('purchase order')) return 'finance';
+      if (subj.includes('delivery') || subj.includes('dispatch') || subj.includes('shipment')) return 'logistics';
+      return 'general';
+    }
+
+    function detectUrgent(r) {
+      const subj = (r[0] || '').toLowerCase();
+      const body = (r[6] || '').substring(0, 300).toLowerCase();
+      return subj.includes('urgent') || subj.includes('asap') || body.includes('urgent') || body.includes('immediately');
+    }
+
+    function extractName(addr) {
+      const match = addr.match(/^([^<]+)</);
+      return match ? match[1].trim() : addr.split('@')[0];
+    }
+
+    function extractDomain(addr) {
+      const match = addr.match(/@([^>]+)/);
+      return match ? match[1].replace('>', '').trim() : addr;
+    }
+
+    // ===== STATS =====
+    function updateStats() {
+      const total = allEmails.length;
+      const sent = allEmails.filter(e => e.type === 'sent').length;
+      const inbox = allEmails.filter(e => e.type === 'inbox').length;
+      const rfq = allEmails.filter(e => e.category === 'rfq').length;
+      const urgent = allEmails.filter(e => e.isUrgent).length;
+      const contacts = new Set(allEmails.map(e => extractDomain(e.type === 'sent' ? e.to : e.from))).size;
+
+      // Mission bar
+      animateNum('stat-total', total);
+      animateNum('stat-inbox', inbox);
+      animateNum('stat-sent', sent);
+      animateNum('stat-rfq', rfq);
+      animateNum('stat-urgent', urgent);
+      animateNum('stat-contacts', contacts);
+
+      // Dashboard cards
+      animateNum('d-total', total);
+      animateNum('d-sent', sent);
+      animateNum('d-inbox', inbox);
+      animateNum('d-urgent', urgent);
+      animateNum('d-rfq', rfq);
+      animateNum('d-contacts', contacts);
+
+      // Weekly report
+      animateNum('wr-total', total);
+      animateNum('wr-sent', sent);
+      animateNum('wr-received', inbox);
+      animateNum('wr-urgent', urgent);
+      animateNum('wr-rfq', rfq);
+      animateNum('wr-contacts', contacts);
+
+      // Badges
+      document.getElementById('badge-emails').textContent = total;
+      document.getElementById('badge-actions').textContent = actionables.length;
+    }
+
+    function animateNum(id, target) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      let current = 0; const step = Math.ceil(target / 30);
+      const iv = setInterval(() => {
+        current = Math.min(current + step, target);
+        el.textContent = current;
+        if (current >= target) clearInterval(iv);
+      }, 30);
+    }
+
+    // ===== EMAIL TABLE =====
+    function renderEmailTable() {
+      const tbody = document.getElementById('email-table-body');
+      const label = document.getElementById('email-count-label');
+      const toShow = filteredEmails.slice(0, 200);
+      label.textContent = filteredEmails.length + ' emails';
+
+      tbody.innerHTML = toShow.map(e => `
+    <tr class="clickable" onclick="toggleDetail(${e.id})">
+      <td><span class="tag ${e.type}">${e.type.toUpperCase()}</span>
+          ${e.category !== 'general' ? `<span class="tag ${e.category}" style="margin-left:4px;">${e.category.toUpperCase()}</span>` : ''}
+          ${e.isUrgent ? `<span class="tag urgent" style="margin-left:4px;">URGENT</span>` : ''}</td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);white-space:nowrap;">${e.date}</td>
+      <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.from}">${extractName(e.from)}</td>
+      <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.to}">${extractName(e.to)}</td>
+      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;" title="${e.subject}">${e.subject || '(no subject)'}</td>
+    </tr>
+    <tr id="detail-${e.id}"><td colspan="5" style="padding:0;">
+      <div class="email-detail" id="detail-body-${e.id}">
+        <div style="padding:0 14px 12px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;">─ BODY PREVIEW ─</div>
+        ${(e.body || '(no body)').replace(/</g, '&lt;').replace(/>/g, '&gt;').substring(0, 1000)}${e.body.length > 1000 ? '\n...[truncated]' : ''}
+      </div>
+    </td></tr>
+  `).join('');
+    }
+
+    function toggleDetail(id) {
+      const el = document.getElementById(`detail-body-${id}`);
+      if (el) el.classList.toggle('open');
+    }
+
+    function filterEmails() {
+      const q = document.getElementById('email-search').value.toLowerCase();
+      const f = document.getElementById('email-filter').value;
+      filteredEmails = allEmails.filter(e => {
+        const matchSearch = !q || e.subject.toLowerCase().includes(q) ||
+          e.from.toLowerCase().includes(q) || e.to.toLowerCase().includes(q);
+        const matchFilter = f === 'all' || e.type === f || e.category === f ||
+          (f === 'urgent' && e.isUrgent);
+        return matchSearch && matchFilter;
+      });
+      renderEmailTable();
+    }
+
+    // ===== TOP CONTACTS =====
+    function renderTopContacts() {
+      const contactMap = {};
+      allEmails.forEach(e => {
+        const isMe = e.type === 'sent';
+        const addr = isMe ? e.to : e.from;
+        const domain = extractDomain(addr);
+        const name = extractName(addr);
+        if (!contactMap[domain]) contactMap[domain] = { name, domain, count: 0, lastDate: '' };
+        contactMap[domain].count++;
+        if (!contactMap[domain].lastDate || e.date > contactMap[domain].lastDate)
+          contactMap[domain].lastDate = e.date;
+      });
+
+      const sorted = Object.values(contactMap).sort((a, b) => b.count - a.count).slice(0, 10);
+      const tbody = document.getElementById('top-contacts-body');
+      tbody.innerHTML = sorted.map(c => `
+    <tr>
+      <td style="font-weight:600;">${c.name}</td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);">${c.domain}</td>
+      <td><span style="font-family:'Orbitron',monospace;font-size:14px;color:var(--accent-cyan);">${c.count}</span></td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);">${c.lastDate}</td>
+    </tr>
+  `).join('');
+
+      // Weekly threads
+      const threads = allEmails.slice(0, 15);
+      const wTbody = document.getElementById('weekly-threads-body');
+      wTbody.innerHTML = threads.map(e => `
+    <tr>
+      <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;">${e.subject || '(no subject)'}</td>
+      <td style="font-size:12px;">${extractName(e.type === 'sent' ? e.to : e.from)}</td>
+      <td><span class="tag ${e.type}">${e.type}</span></td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);">${e.date}</td>
+    </tr>
+  `).join('');
+    }
+    function renderSupabaseVolumeChart() {
+      if (!allWeekBackups.length) return;
+
+      // Sort by date
+      const sorted = [...allWeekBackups].sort((a, b) =>
+        new Date(a.backup_date) - new Date(b.backup_date)
+      );
+
+      const labels = sorted.map(w => w.week_label || ('Wk ' + w.week_number));
+      const totalCounts = sorted.map(w => w.email_count || 0);
+      const sentCounts = sorted.map(w => w.sent_count || 0);
+      const inboxCounts = sorted.map(w => w.received_count || 0);
+      const urgentCounts = sorted.map(w => w.urgent_count || 0);
+
+      if (charts.volume) charts.volume.destroy();
+      charts.volume = new Chart(document.getElementById('chart-volume'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'INBOX',
+              data: inboxCounts,
+              backgroundColor: 'rgba(0,212,255,0.35)',
+              borderColor: 'rgba(0,212,255,0.9)',
+              borderWidth: 1,
+              borderRadius: 3,
+            },
+            {
+              label: 'SENT',
+              data: sentCounts,
+              backgroundColor: 'rgba(0,255,159,0.35)',
+              borderColor: 'rgba(0,255,159,0.9)',
+              borderWidth: 1,
+              borderRadius: 3,
+            },
+            {
+              label: 'URGENT',
+              data: urgentCounts,
+              backgroundColor: 'rgba(255,51,102,0.35)',
+              borderColor: 'rgba(255,51,102,0.9)',
+              borderWidth: 1,
+              borderRadius: 3,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              labels: { color: '#7aa3c8', font: { family: 'Share Tech Mono', size: 9 }, boxWidth: 10 }
+            },
+            tooltip: {
+              callbacks: {
+                title: (items) => labels[items[0].dataIndex],
+                afterBody: (items) => `TOTAL: ${totalCounts[items[0].dataIndex]}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: false,
+              grid: { color: 'rgba(0,212,255,0.05)' },
+              ticks: { color: '#7aa3c8', font: { family: 'Share Tech Mono', size: 9 } }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(0,212,255,0.05)' },
+              ticks: { color: '#7aa3c8', font: { family: 'Share Tech Mono', size: 9 } }
+            }
+          }
+        }
+      });
+
+      // Update chart panel title
+      const titleEl = document.querySelector('#view-dashboard .panel-title');
+      if (titleEl && titleEl.textContent.includes('EMAIL VOLUME')) {
+        titleEl.innerHTML = titleEl.innerHTML.replace('DAILY EMAIL VOLUME', 'WEEKLY EMAIL VOLUME — ALL HISTORY');
+      }
+    }
+    // ===== CHARTS =====
+    function renderCharts() {
+      // Daily volume — normalize raw RFC date to YYYY-MM-DD for grouping
+      // Weekly volume — group by Mon-Sun week
+      const weekCounts = {};
+      allEmails.forEach(e => {
+        if (!e.date) return;
+        const parsed = new Date(e.date);
+        if (isNaN(parsed)) return;
+        // Get Monday of that week
+        const day = parsed.getDay(); // 0=Sun
+        const diff = (day === 0) ? -6 : 1 - day;
+        const mon = new Date(parsed);
+        mon.setDate(parsed.getDate() + diff);
+        const key = mon.toISOString().slice(0, 10); // Monday YYYY-MM-DD
+        weekCounts[key] = (weekCounts[key] || 0) + 1;
+      });
+      const CHART_START = new Date('2026-03-01');
+      const dates = Object.keys(weekCounts).filter(d => new Date(d) >= CHART_START).sort();
+      const counts = dates.map(d => weekCounts[d]);
+      const labels = dates.map(d => {
+        const mon = new Date(d);
+        const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+        return mon.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+          + '–' + sun.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      });
+
+      if (charts.volume) charts.volume.destroy();
+      charts.volume = new Chart(document.getElementById('chart-volume'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: counts,
+            backgroundColor: 'rgba(0,212,255,0.25)',
+            borderColor: 'rgba(0,212,255,0.9)',
+            borderWidth: 1,
+            borderRadius: 4,
+            hoverBackgroundColor: 'rgba(0,212,255,0.45)',
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: 'rgba(0,212,255,0.05)' }, ticks: { color: '#7aa3c8', font: { family: 'Share Tech Mono', size: 9 } } },
+            y: { grid: { color: 'rgba(0,212,255,0.05)' }, ticks: { color: '#7aa3c8', font: { family: 'Share Tech Mono', size: 9 } }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Breakdown donut
+      const sent = allEmails.filter(e => e.type === 'sent').length;
+      const inbox = allEmails.filter(e => e.type === 'inbox').length;
+      const rfq = allEmails.filter(e => e.category === 'rfq').length;
+      const urgent = allEmails.filter(e => e.isUrgent).length;
+
+      if (charts.breakdown) charts.breakdown.destroy();
+      charts.breakdown = new Chart(document.getElementById('chart-breakdown'), {
+        type: 'doughnut',
+        data: {
+          labels: ['INBOX', 'SENT', 'RFQ', 'URGENT'],
+          datasets: [{
+            data: [inbox - rfq, sent, rfq, urgent],
+            backgroundColor: ['rgba(0,212,255,0.6)', 'rgba(0,255,159,0.6)', 'rgba(255,215,0,0.6)', 'rgba(255,51,102,0.6)'],
+            borderColor: ['#00d4ff', '#00ff9f', '#ffd700', '#ff3366'],
+            borderWidth: 1,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#7aa3c8', font: { family: 'Share Tech Mono', size: 9 }, boxWidth: 10 }
+            }
+          }
+        }
+      });
+    }
+
+    // ===== WEEKLY VIEW =====
+    function renderWeeklyView() {
+      const dates = allEmails.map(e => e.date).filter(Boolean).sort();
+      if (dates.length) {
+        const first = dates[0], last = dates[dates.length - 1];
+        document.getElementById('week-range').textContent = `${first} – ${last} · Week ${currentWeek}`;
+      }
+      document.getElementById('stat-week').textContent = `WK ${currentWeek}`;
+    }
+
+    // ===== SUPABASE =====
+    async function connectSupabase() {
+      const url = document.getElementById('sb-url').value.trim();
+      const key = document.getElementById('sb-key').value.trim();
+      if (!url || !key) { showToast('⚠ Enter Supabase URL and key'); return; }
+
+      try {
+        const res = await fetch(`${url}/rest/v1/weekly_email_backups?limit=1`, {
+          headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+        });
+        if (res.ok || res.status === 406) {
+          supabaseClient = { url, key };
+          document.getElementById('db-dot').classList.add('connected');
+          document.getElementById('db-text').textContent = 'SUPABASE: ONLINE';
+          document.getElementById('db-status').style.color = 'var(--accent-green)';
+          showToast('✓ Supabase connected!');
+        } else { throw new Error(res.statusText); }
+      } catch (err) {
+        showToast('✗ Supabase connection failed: ' + err.message);
+      }
+    }
+
+    async function backupWeekToSupabase() {
+      if (!supabaseClient) { showToast('⚠ Connect Supabase first'); return; }
+      if (!allEmails.length) { showToast('⚠ Load email data first'); return; }
+
+      console.log('[DEBUG] allEmails sample (first email):', allEmails[0]);
+      console.log('[DEBUG] allEmails sample body length:', (allEmails[0] && allEmails[0].body) ? allEmails[0].body.length : 'NO BODY FIELD');
+      const emailWithBody = allEmails.find(e => e.body && e.body.length > 10);
+      console.log('[DEBUG] first email WITH a non-trivial body:', emailWithBody ? { subject: emailWithBody.subject, bodyLen: emailWithBody.body.length, bodyStart: emailWithBody.body.substring(0,80) } : 'NONE FOUND IN allEmails');
+
+      const payload = {
+        week_number: currentWeek,
+        week_year: currentYear,
+        week_label: `Week ${currentWeek}, ${currentYear}`,
+        email_count: allEmails.length,
+        sent_count: allEmails.filter(e => e.type === 'sent').length,
+        received_count: allEmails.filter(e => e.type === 'inbox').length,
+        rfq_count: allEmails.filter(e => e.category === 'rfq').length,
+        urgent_count: allEmails.filter(e => e.isUrgent).length,
+        ai_summary: aiSummary,
+        actionables: JSON.stringify(actionables),
+        top_contacts: JSON.stringify([]),
+        raw_data: JSON.stringify(allEmails.map(e => ({
+          subject: e.subject, from: e.from, to: e.to, date: e.date, type: e.type, category: e.category,
+          isUrgent: e.isUrgent, body: e.body
+        })))
+      };
+      console.log('[DEBUG] payload.raw_data length (chars):', payload.raw_data.length);
+      const parsedRawCheck = JSON.parse(payload.raw_data);
+      const checkWithBody = parsedRawCheck.find(e => e.body && e.body.length > 10);
+      console.log('[DEBUG] payload raw_data - first item with body:', checkWithBody ? { subject: checkWithBody.subject, bodyLen: checkWithBody.body.length } : 'NONE - body missing from payload!');
+
+      try {
+        const res = await fetch(`${supabaseClient.url}/rest/v1/weekly_email_backups`, {
+          method: 'POST',
+          headers: {
+            'apikey': supabaseClient.key,
+            'Authorization': `Bearer ${supabaseClient.key}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok || res.status === 201) {
+          document.getElementById('backup-status').textContent = `✓ BACKED UP ${new Date().toLocaleDateString()}`;
+          document.getElementById('backup-status').style.color = 'var(--accent-green)';
+          showToast(`✓ Week ${currentWeek} backed up to Supabase!`);
+        } else {
+          const txt = await res.text();
+          throw new Error(txt);
+        }
+      } catch (err) {
+        showToast('✗ Backup failed: ' + err.message);
+      }
+    }
+
+    // ===== GROQ AI STREAMING =====
+    async function runFullAnalysis() {
+      const key = document.getElementById('groq-key').value.trim();
+      if (!key) { showToast('⚠ Enter your GROQ API key'); switchView('setup'); return; }
+      if (!allEmails.length) { showToast('⚠ Load CSV data first'); return; }
+
+      switchView('ai');
+      const container = document.getElementById('ai-stream-container');
+      container.innerHTML = `<span class="stream-prefix">MAILMISSION AI ◈</span> <span class="stream-thinking">Preparing mission data...</span><span class="ai-cursor"></span>`;
+
+      document.getElementById('btn-analyze').disabled = true;
+      document.getElementById('system-status').textContent = 'ANALYZING...';
+
+      // Build context from emails
+      const sample = allEmails.slice(0, 40);
+      const emailContext = sample.map((e, i) =>
+        `[${i + 1}] ${e.date} | ${e.type.toUpperCase()} | From: ${e.from} | To: ${e.to} | Subject: ${e.subject} | Preview: ${e.body.substring(0, 150)}`
+      ).join('\n');
+
+      const stats = {
+        total: allEmails.length,
+        sent: allEmails.filter(e => e.type === 'sent').length,
+        inbox: allEmails.filter(e => e.type === 'inbox').length,
+        rfq: allEmails.filter(e => e.category === 'rfq').length,
+        urgent: allEmails.filter(e => e.isUrgent).length,
+      };
+
+      const prompt = `You are an elite AI business intelligence analyst for PRECISION SPARES MFG CO, a manufacturing company in Kolkata, India.
+
+WEEK ${currentWeek} EMAIL INTELLIGENCE SUMMARY:
+- Total Emails: ${stats.total}
+- Sent: ${stats.sent} | Received: ${stats.inbox}
+- RFQ/Quotations: ${stats.rfq} | Urgent: ${stats.urgent}
+
+SAMPLE EMAIL DATA (${sample.length} of ${allEmails.length}):
+${emailContext}
+
+YOUR MISSION: Analyze this week's email communications and provide:
+
+1. **EXECUTIVE SUMMARY** — 3-4 sentences on the week's key business activity
+2. **KEY BUSINESS THREADS** — Top 5 important email threads needing attention
+3. **ACTIONABLE ITEMS** — List 8-10 specific action items with priority (HIGH/MEDIUM/LOW), the party involved, and what needs to be done
+4. **BUSINESS INTELLIGENCE** — Patterns, opportunities, or risks you see
+5. **FOLLOW-UP REQUIRED** — Emails that need a reply or follow-up
+
+Format actionables as:
+ACTION: [title] | PRIORITY: [HIGH/MEDIUM/LOW] | PARTY: [contact/company] | DETAIL: [what to do]
+
+Be specific, professional, and reference actual email subjects and companies from the data.`;
+
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: document.getElementById('groq-model').value,
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 3000,
+            stream: true,
+            temperature: 0.7
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error?.message || response.statusText);
+        }
+
+        container.innerHTML = `<span class="stream-prefix">MAILMISSION AI ◈</span> `;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          for (const line of lines) {
+            if (!line.startsWith('data: ') || line === 'data: [DONE]') continue;
+            try {
+              const json = JSON.parse(line.slice(6));
+              const delta = json.choices?.[0]?.delta?.content || '';
+              fullText += delta;
+              container.innerHTML = `<span class="stream-prefix">MAILMISSION AI ◈</span> ` +
+                formatAIText(fullText) + `<span class="ai-cursor"></span>`;
+              container.scrollTop = container.scrollHeight;
+            } catch { }
+          }
+        }
+
+        // Remove cursor
+        container.innerHTML = `<span class="stream-prefix">MAILMISSION AI ◈</span> ` + formatAIText(fullText);
+        aiSummary = fullText;
+
+        // Parse actionables
+        parseActionables(fullText);
+
+        // Update quick summary
+        const summaryEl = document.getElementById('quick-summary');
+        const summaryMatch = fullText.match(/EXECUTIVE SUMMARY[\s\S]*?(?=\n\n\d\.|\n\n\*\*)/i);
+        if (summaryMatch) {
+          summaryEl.innerHTML = `<div class="summary-block"><div class="summary-label">AI EXECUTIVE SUMMARY</div>${summaryMatch[0].replace(/\*\*/g, '').replace(/EXECUTIVE SUMMARY[:\s]*/i, '')}</div>`;
+        }
+
+        document.getElementById('weekly-summary-body').innerHTML = formatAIText(fullText);
+        document.getElementById('system-status').textContent = 'ANALYSIS COMPLETE';
+        showToast('✓ AI Analysis complete!');
+
+      } catch (err) {
+        container.innerHTML = `<span style="color:var(--accent-red)">✗ ERROR: ${err.message}</span><br/><br/><span style="color:var(--text-dim)">Check your GROQ API key and try again.</span>`;
+        document.getElementById('system-status').textContent = 'ERROR';
+        showToast('✗ ' + err.message);
+      } finally {
+        document.getElementById('btn-analyze').disabled = false;
+      }
+    }
+
+    function formatAIText(text) {
+      return text
+        .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:var(--accent-cyan)">$1</strong>')
+        .replace(/^#{1,3} (.+)$/gm, '<strong style="color:var(--accent-orange);font-family:Orbitron,monospace;font-size:11px;letter-spacing:2px;">$1</strong>')
+        .replace(/ACTION: ([^|]+)\| PRIORITY: (HIGH|MEDIUM|LOW)/g, (m, title, priority) => {
+          const colors = { HIGH: 'var(--accent-red)', MEDIUM: 'var(--accent-yellow)', LOW: 'var(--accent-green)' };
+          return `<span style="color:${colors[priority] || 'var(--accent-cyan)'};font-weight:bold;">[${priority}] ${title}</span>`;
+        })
+        .replace(/\n/g, '<br/>');
+    }
+
+    function parseActionables(text) {
+      actionables = [];
+      const lines = text.split('\n');
+      lines.forEach(line => {
+        const match = line.match(/ACTION:\s*([^|]+)\|\s*PRIORITY:\s*(HIGH|MEDIUM|LOW)\s*\|\s*PARTY:\s*([^|]+)\|\s*DETAIL:\s*(.+)/i);
+        if (match) {
+          actionables.push({
+            title: match[1].trim(),
+            priority: match[2].trim(),
+            party: match[3].trim(),
+            detail: match[4].trim()
+          });
+        }
+      });
+
+      // Fallback: find numbered items
+      if (actionables.length < 3) {
+        const matches = text.matchAll(/\d+\.\s+\*?\*?([^*\n]{20,80})\*?\*?/g);
+        for (const m of matches) {
+          if (actionables.length >= 10) break;
+          const title = m[1].trim();
+          if (title.length > 15) {
+            actionables.push({
+              title, priority: 'MEDIUM', party: 'General', detail: title
+            });
+          }
+        }
+      }
+
+      renderActionables();
+      document.getElementById('badge-actions').textContent = actionables.length;
+      document.getElementById('action-count-label').textContent = actionables.length + ' action items';
+    }
+
+    function renderActionables() {
+      const container = document.getElementById('actionables-container');
+      if (!actionables.length) {
+        container.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:12px;color:var(--text-dim);text-align:center;padding:40px;">[ NO ACTIONABLES PARSED ]</div>';
+        return;
+      }
+      container.innerHTML = actionables.map((a, i) => `
+    <div class="action-item">
+      <div class="action-header">
+        <div class="priority-badge priority-${a.priority}"></div>
+        <div class="action-title">${a.title}</div>
+        <span class="tag ${a.priority === 'HIGH' ? 'urgent' : a.priority === 'MEDIUM' ? 'rfq' : 'inbox'}" style="margin-left:auto;">${a.priority}</span>
+      </div>
+      <div class="action-body">${a.detail}</div>
+      <div class="action-meta">
+        <span>🏢 ${a.party}</span>
+        <span>ITEM #${String(i + 1).padStart(2, '0')}</span>
+      </div>
+    </div>
+  `).join('');
+    }
+
+    // ===== EXPORTS =====
+    function logExport(msg) {
+      const log = document.getElementById('export-log');
+      const time = new Date().toLocaleTimeString();
+      log.innerHTML += `<span style="color:var(--text-dim)">[${time}]</span> <span style="color:var(--accent-green)">✓</span> ${msg}<br/>`;
+    }
+
+    function exportXLSX() {
+      if (!allEmails.length) { showToast('⚠ Load data first'); return; }
+      const wb = XLSX.utils.book_new();
+
+      // Main sheet
+      const wsData = [['Subject', 'From', 'To', 'Date', 'Type', 'Category', 'Urgent', 'Body Preview']];
+      allEmails.forEach(e => wsData.push([
+        e.subject, e.from, e.to, e.date, e.type, e.category, e.isUrgent ? 'YES' : 'NO', e.body.substring(0, 200)
+      ]));
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = [{ wch: 40 }, { wch: 30 }, { wch: 30 }, { wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 8 }, { wch: 60 }];
+      XLSX.utils.book_append_sheet(wb, ws, 'Emails');
+
+      // Stats sheet
+      const stats = [
+        ['Metric', 'Value'],
+        ['Total Emails', allEmails.length],
+        ['Sent', allEmails.filter(e => e.type === 'sent').length],
+        ['Received', allEmails.filter(e => e.type === 'inbox').length],
+        ['RFQ', allEmails.filter(e => e.category === 'rfq').length],
+        ['Urgent', allEmails.filter(e => e.isUrgent).length],
+        ['Week', `Week ${currentWeek}, ${currentYear}`],
+        ['Generated', new Date().toLocaleString()],
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(stats), 'Summary');
+
+      XLSX.writeFile(wb, `MailMission_Week${currentWeek}_${currentYear}.xlsx`);
+      logExport('Email Dataset XLSX exported');
+      showToast('✓ XLSX exported!');
+    }
+
+    function exportActionablesPDF() {
+      if (!actionables.length) { showToast('⚠ Run AI Analysis first'); return; }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = doc.internal.pageSize.getWidth();
+      const H = doc.internal.pageSize.getHeight();
+
+      // Background
+      doc.setFillColor(3, 8, 18); doc.rect(0, 0, W, H, 'F');
+
+      // Header
+      doc.setFillColor(0, 50, 80); doc.rect(0, 0, W, 28, 'F');
+      doc.setTextColor(0, 212, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+      doc.text('MAILMISSION — ACTIONABLE ITEMS REPORT', W / 2, 12, { align: 'center' });
+      doc.setFontSize(8); doc.setTextColor(100, 160, 200);
+      doc.text(`PRECISION SPARES MFG CO · WEEK ${currentWeek}, ${currentYear} · Generated: ${new Date().toLocaleString()}`, W / 2, 20, { align: 'center' });
+
+      let y = 38;
+      actionables.forEach((a, i) => {
+        if (y > H - 40) { doc.addPage(); doc.setFillColor(3, 8, 18); doc.rect(0, 0, W, H, 'F'); y = 20; }
+
+        const prioColors = { HIGH: [255, 51, 102], MEDIUM: [255, 215, 0], LOW: [0, 255, 159] };
+        const col = prioColors[a.priority] || [0, 212, 255];
+
+        // Card bg
+        doc.setFillColor(10, 22, 40); doc.roundedRect(10, y - 4, W - 20, 30, 2, 2, 'F');
+        doc.setDrawColor(...col); doc.setLineWidth(0.5);
+        doc.roundedRect(10, y - 4, W - 20, 30, 2, 2, 'S');
+        doc.setFillColor(...col); doc.rect(10, y - 4, 3, 30, 'F');
+
+        // Priority badge
+        doc.setFillColor(...col); doc.roundedRect(W - 45, y, 35, 6, 1, 1, 'F');
+        doc.setTextColor(3, 8, 18); doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+        doc.text(a.priority, W - 27.5, y + 4.2, { align: 'center' });
+
+        // Title
+        doc.setTextColor(230, 244, 253); doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+        doc.text(`${String(i + 1).padStart(2, '0')}. ${a.title}`, 18, y + 5);
+
+        // Party
+        doc.setTextColor(...col); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+        doc.text(`🏢 ${a.party}`, 18, y + 11);
+
+        // Detail
+        doc.setTextColor(120, 163, 200); doc.setFontSize(8);
+        const lines = doc.splitTextToSize(a.detail, W - 50);
+        doc.text(lines.slice(0, 2), 18, y + 17);
+
+        y += 36;
+      });
+
+      doc.save(`MailMission_Actionables_Week${currentWeek}.pdf`);
+      logExport('Actionables PDF exported');
+      showToast('✓ Actionables PDF exported!');
+    }
+
+    function exportWeeklyReportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = doc.internal.pageSize.getWidth();
+      const H = doc.internal.pageSize.getHeight();
+
+      doc.setFillColor(3, 8, 18); doc.rect(0, 0, W, H, 'F');
+      doc.setFillColor(0, 30, 60); doc.rect(0, 0, W, 40, 'F');
+
+      doc.setTextColor(0, 212, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(22);
+      doc.text('WEEKLY INTELLIGENCE REPORT', W / 2, 16, { align: 'center' });
+      doc.setFontSize(10); doc.setTextColor(100, 160, 200);
+      doc.text('PRECISION SPARES MFG CO — AI EMAIL ANALYTICS', W / 2, 24, { align: 'center' });
+      doc.setFontSize(8);
+      doc.text(`Week ${currentWeek}, ${currentYear} · ${new Date().toLocaleDateString()}`, W / 2, 33, { align: 'center' });
+
+      // Stats boxes
+      const stats = [
+        { label: 'TOTAL', val: allEmails.length, col: [0, 212, 255] },
+        { label: 'SENT', val: allEmails.filter(e => e.type === 'sent').length, col: [0, 255, 159] },
+        { label: 'INBOX', val: allEmails.filter(e => e.type === 'inbox').length, col: [0, 212, 255] },
+        { label: 'RFQ', val: allEmails.filter(e => e.category === 'rfq').length, col: [255, 215, 0] },
+        { label: 'URGENT', val: allEmails.filter(e => e.isUrgent).length, col: [255, 51, 102] },
+      ];
+
+      let sx = 12;
+      stats.forEach(s => {
+        doc.setFillColor(10, 22, 40); doc.roundedRect(sx, 46, 36, 20, 2, 2, 'F');
+        doc.setDrawColor(...s.col); doc.setLineWidth(0.3);
+        doc.roundedRect(sx, 46, 36, 20, 2, 2, 'S');
+        doc.setTextColor(...s.col); doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+        doc.text(String(s.val), sx + 18, 58, { align: 'center' });
+        doc.setFontSize(6); doc.setTextColor(100, 140, 180);
+        doc.text(s.label, sx + 18, 63, { align: 'center' });
+        sx += 38;
+      });
+
+      let y = 78;
+      if (aiSummary) {
+        doc.setTextColor(0, 212, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.text('AI EXECUTIVE SUMMARY', 12, y); y += 6;
+        doc.setDrawColor(0, 212, 255); doc.setLineWidth(0.3); doc.line(12, y, W - 12, y); y += 5;
+        doc.setTextColor(180, 210, 230); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+        const cleanSummary = aiSummary.replace(/\*\*/g, '').substring(0, 800);
+        const summLines = doc.splitTextToSize(cleanSummary, W - 24);
+        summLines.slice(0, 15).forEach(line => {
+          if (y > H - 20) return;
+          doc.text(line, 12, y); y += 5;
+        });
+      }
+
+      // Top emails
+      y += 4;
+      doc.setTextColor(0, 212, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+      doc.text('TOP EMAIL THREADS', 12, y); y += 6;
+      doc.setDrawColor(0, 212, 255); doc.line(12, y, W - 12, y); y += 4;
+
+      allEmails.slice(0, 10).forEach((e, i) => {
+        if (y > H - 20) return;
+        doc.setFillColor(10, 22, 40); doc.rect(12, y - 3, W - 24, 8, 'F');
+        doc.setTextColor(e.type === 'sent' ? [0, 255, 159] : [0, 212, 255]);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+        doc.text(e.type.toUpperCase(), 14, y + 1.5);
+        doc.setTextColor(180, 210, 230); doc.setFont('helvetica', 'normal');
+        doc.text(e.subject.substring(0, 60), 28, y + 1.5);
+        doc.setTextColor(80, 120, 160);
+        doc.text(e.date, W - 25, y + 1.5);
+        y += 9;
+      });
+
+      doc.save(`MailMission_WeeklyReport_Week${currentWeek}.pdf`);
+      logExport('Weekly Report PDF exported');
+      showToast('✓ Weekly Report PDF exported!');
+    }
+
+    function exportUserManualDOCX() {
+      // Generate a styled HTML user manual and trigger download as .html (DOCX via blob)
+      const manualContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;color:#222;line-height:1.8}
+h1{color:#003366;border-bottom:3px solid #003366;padding-bottom:10px}
+h2{color:#0055AA;border-left:4px solid #0055AA;padding-left:12px;margin-top:32px}
+h3{color:#0077CC}code{background:#f0f4ff;padding:2px 6px;border-radius:3px;font-size:13px}
+table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:8px;font-size:13px}
+th{background:#003366;color:white}.note{background:#fff8e1;border-left:4px solid #ffd700;padding:12px;margin:16px 0}
+</style></head><body>
+<h1>📘 MAILMISSION — USER MANUAL</h1>
+<p><strong>System:</strong> AI Email Intelligence System v1.0<br/>
+<strong>Client:</strong> Precision Spares Mfg Co, Kolkata<br/>
+<strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+
+<h2>1. System Overview</h2>
+<p>MAILMISSION is an AI-powered email intelligence dashboard that connects to your Thunderbird email client and Yahoo Mail, analyzes your weekly business communications using GROQ AI, stores backups in Supabase, and generates professional export reports.</p>
+
+<h2>2. Initial Setup</h2>
+<h3>2.1 Thunderbird Export</h3>
+<p>Install the <strong>ImportExportTools NG</strong> add-on in Thunderbird. Right-click any folder → Import/Export → Export all messages → CSV. Save as <code>messages.csv</code>.</p>
+
+<h3>2.2 GROQ API Configuration</h3>
+<p>1. Visit <code>console.groq.com</code> and create a free account.<br/>
+2. Navigate to API Keys → Create API Key.<br/>
+3. Copy the key starting with <code>gsk_</code> and paste it in the GROQ API KEY field in the sidebar.</p>
+
+<h3>2.3 Supabase Setup</h3>
+<p>1. Create a free project at <code>supabase.com</code>.<br/>
+2. Go to Settings → API → copy Project URL and anon/public key.<br/>
+3. Run the provided SQL to create the <code>weekly_email_backups</code> table.<br/>
+4. Enter credentials in the sidebar and click CONNECT SUPABASE.</p>
+
+<h2>3. Daily Workflow</h2>
+<table><tr><th>Step</th><th>Action</th><th>Details</th></tr>
+<tr><td>1</td><td>Export from Thunderbird</td><td>Use ImportExportTools NG to export inbox/sent as CSV</td></tr>
+<tr><td>2</td><td>Load CSV</td><td>Click "Load Thunderbird CSV Export" in sidebar</td></tr>
+<tr><td>3</td><td>Launch AI Analysis</td><td>Click "LAUNCH AI ANALYSIS" — watch live streaming results</td></tr>
+<tr><td>4</td><td>Review Actionables</td><td>Check the ACTIONABLES tab for prioritized items</td></tr>
+<tr><td>5</td><td>Export Reports</td><td>Use Export Center to download XLSX, PDFs, DOCX or ZIP</td></tr>
+</table>
+
+<h2>4. Weekly Backup Process</h2>
+<div class="note">⚠ Every Monday, before loading new emails, click "BACKUP WEEK TO DB" to archive the previous week's data to Supabase. The system will reset for the new week's data.</div>
+<p>Previous weeks are stored in Supabase and can be retrieved via the Supabase dashboard or SQL queries.</p>
+
+<h2>5. Export Files Reference</h2>
+<table><tr><th>File</th><th>Format</th><th>Contents</th></tr>
+<tr><td>Email Dataset</td><td>XLSX</td><td>All emails with metadata and body previews</td></tr>
+<tr><td>Actionables Report</td><td>PDF</td><td>AI-generated priority action items</td></tr>
+<tr><td>Weekly Report</td><td>PDF</td><td>Executive summary and email overview</td></tr>
+<tr><td>User Manual</td><td>DOCX/HTML</td><td>This document</td></tr>
+<tr><td>Email Summaries</td><td>PDF</td><td>Individual AI summaries of top 20 emails</td></tr>
+<tr><td>Full Package</td><td>ZIP</td><td>All above files in one download</td></tr>
+</table>
+
+<h2>6. Thunderbird + Yahoo Mail IMAP Settings</h2>
+<table><tr><th>Setting</th><th>Value</th></tr>
+<tr><td>IMAP Server</td><td>imap.mail.yahoo.com</td></tr>
+<tr><td>IMAP Port</td><td>993 (SSL)</td></tr>
+<tr><td>SMTP Server</td><td>smtp.mail.yahoo.com</td></tr>
+<tr><td>SMTP Port</td><td>465 (SSL)</td></tr>
+<tr><td>Username</td><td>your full Yahoo email</td></tr>
+<tr><td>Password</td><td>Yahoo App Password (not login password)</td></tr>
+</table>
+
+<h2>7. Troubleshooting</h2>
+<p><strong>GROQ API Error:</strong> Verify API key is correct and starts with gsk_. Check Groq console for usage limits.<br/>
+<strong>Supabase Connection Failed:</strong> Ensure the SQL table was created and RLS is disabled for the backups table.<br/>
+<strong>CSV Not Loading:</strong> Ensure file is exported as CSV from Thunderbird. Check encoding is UTF-8.<br/>
+<strong>AI Analysis Empty:</strong> Try reducing email batch size or switching to a faster model.</p>
+
+<p style="margin-top:40px;font-size:12px;color:#888;">© ${new Date().getFullYear()} MailMission AI System · Precision Spares Mfg Co · Generated ${new Date().toLocaleString()}</p>
+</body></html>`;
+
+      const blob = new Blob([manualContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'MailMission_UserManual.html'; a.click();
+      URL.revokeObjectURL(url);
+      logExport('User Manual exported (HTML/Word-compatible)');
+      showToast('✓ User Manual exported!');
+    }
+
+    function exportEmailSummariesPDF() {
+      if (!allEmails.length) { showToast('⚠ Load data first'); return; }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = doc.internal.pageSize.getWidth();
+      const H = doc.internal.pageSize.getHeight();
+
+      const emails = allEmails.slice(0, 20);
+
+      emails.forEach((e, i) => {
+        if (i > 0) doc.addPage();
+        doc.setFillColor(3, 8, 18); doc.rect(0, 0, W, H, 'F');
+        doc.setFillColor(0, 30, 60); doc.rect(0, 0, W, 24, 'F');
+
+        // Header
+        doc.setTextColor(0, 212, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+        doc.text(`EMAIL ${String(i + 1).padStart(2, '0')} OF ${emails.length}`, 12, 10);
+        doc.setFontSize(7); doc.setTextColor(100, 160, 200);
+        doc.text(`PRECISION SPARES MFG CO · MAILMISSION`, W - 12, 10, { align: 'right' });
+
+        let y = 34;
+
+        // Subject
+        doc.setTextColor(230, 244, 253); doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+        const subjLines = doc.splitTextToSize(e.subject || '(no subject)', W - 24);
+        doc.text(subjLines, 12, y); y += subjLines.length * 7 + 4;
+
+        // Meta
+        const metaItems = [
+          { label: 'FROM', val: e.from, col: [0, 212, 255] },
+          { label: 'TO', val: e.to, col: [0, 255, 159] },
+          { label: 'DATE', val: e.date, col: [255, 215, 0] },
+          { label: 'TYPE', val: e.type.toUpperCase() + (e.category !== 'general' ? ' / ' + e.category.toUpperCase() : ''), col: e.type === 'sent' ? [0, 255, 159] : [0, 212, 255] },
+        ];
+        metaItems.forEach(m => {
+          doc.setFillColor(10, 22, 40); doc.rect(12, y - 3, W - 24, 8, 'F');
+          doc.setTextColor(...m.col); doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+          doc.text(m.label, 15, y + 1.5);
+          doc.setTextColor(180, 210, 230); doc.setFont('helvetica', 'normal');
+          doc.text(m.val.substring(0, 80), 35, y + 1.5);
+          y += 10;
+        });
+
+        y += 4;
+        doc.setDrawColor(0, 212, 255, 0.3); doc.setLineWidth(0.3); doc.line(12, y, W - 12, y); y += 6;
+
+        // Body
+        doc.setTextColor(0, 212, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+        doc.text('EMAIL BODY PREVIEW', 12, y); y += 6;
+        doc.setTextColor(150, 190, 220); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+        const bodyClean = (e.body || '').replace(/\r\n/g, '\n').substring(0, 600);
+        const bodyLines = doc.splitTextToSize(bodyClean, W - 24);
+        bodyLines.slice(0, Math.min(bodyLines.length, Math.floor((H - y - 20) / 5))).forEach(line => {
+          doc.text(line, 12, y); y += 5;
+        });
+
+        // Footer
+        doc.setFillColor(0, 20, 40); doc.rect(0, H - 14, W, 14, 'F');
+        doc.setTextColor(50, 100, 150); doc.setFontSize(7);
+        doc.text(`MailMission · Week ${currentWeek} · Generated ${new Date().toLocaleString()}`, W / 2, H - 5, { align: 'center' });
+      });
+
+      doc.save(`MailMission_EmailSummaries_Week${currentWeek}.pdf`);
+      logExport(`Email Summaries PDF exported (${emails.length} emails)`);
+      showToast('✓ Email Summaries PDF exported!');
+    }
+
+    async function exportFullZip() {
+      if (!allEmails.length) { showToast('⚠ Load data first'); return; }
+      showToast('⏳ Building ZIP package...');
+
+      const zip = new JSZip();
+      const folder = zip.folder(`MailMission_Week${currentWeek}_${currentYear}`);
+
+      // Add a README
+      const readme = `MAILMISSION — WEEK ${currentWeek}, ${currentYear} PACKAGE
+Generated: ${new Date().toLocaleString()}
+Company: Precision Spares Mfg Co
+
+Contents:
+- EmailDataset.xlsx — Full email data
+- WeeklyReport.pdf — Weekly intelligence report
+- Actionables.pdf — AI action items
+- EmailSummaries.pdf — Individual email summaries
+- UserManual.html — System user manual
+
+Total emails processed: ${allEmails.length}
+Sent: ${allEmails.filter(e => e.type === 'sent').length}
+Received: ${allEmails.filter(e => e.type === 'inbox').length}
+RFQs: ${allEmails.filter(e => e.category === 'rfq').length}
+`;
+      folder.file('README.txt', readme);
+
+      // Add CSV data summary as text
+      const csvContent = ['Subject,From,To,Date,Type,Category,Urgent'].concat(
+        allEmails.map(e => `"${e.subject}","${e.from}","${e.to}","${e.date}","${e.type}","${e.category}","${e.isUrgent ? 'YES' : 'NO'}"`)
+      ).join('\n');
+      folder.file('emails.csv', csvContent);
+
+      // Add AI summary if available
+      if (aiSummary) folder.file('AI_Analysis.txt', aiSummary);
+
+      // Add actionables as JSON
+      if (actionables.length) folder.file('actionables.json', JSON.stringify(actionables, null, 2));
+
+      const content = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `MailMission_Week${currentWeek}_${currentYear}_Package.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      logExport(`Full ZIP package exported`);
+      showToast('✓ Full ZIP package downloaded!');
+    }
+
+
+    // ===== HISTORY / SUPABASE RESTORE =====
+    let allWeekBackups = [];      // full list from Supabase
+    let historyEmails = [];       // raw_data of currently loaded history week
+    let historyFilteredEmails = [];
+    let activeHistoryRecord = null;
+
+    async function fetchWeekListFromSupabase() {
+      if (!supabaseClient) { showToast('⚠ Connect Supabase first'); return; }
+
+      showToast('⏳ Fetching archive list...');
+      try {
+        const res = await fetch(
+          `${supabaseClient.url}/rest/v1/weekly_email_backups?select=id,week_number,week_year,week_label,backup_date,email_count,sent_count,received_count,rfq_count,urgent_count&order=backup_date.desc`,
+          { headers: { 'apikey': supabaseClient.key, 'Authorization': `Bearer ${supabaseClient.key}` } }
+        );
+        if (!res.ok) throw new Error(await res.text());
+        allWeekBackups = await res.json();
+        renderSupabaseVolumeChart();
+
+        renderWeekCards();
+        populateCompareDropdowns();
+        document.getElementById('badge-history').textContent = allWeekBackups.length;
+        switchView('history');
+        showToast(`✓ Found ${allWeekBackups.length} archived week(s)`);
+      } catch (err) {
+        showToast('✗ Fetch failed: ' + err.message);
+      }
+    }
+
+    window.renderWeekCards = function () {
+      const container = document.getElementById('history-week-cards');
+      const inlineArg = (value) => String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      if (!allWeekBackups.length) {
+        container.innerHTML = `<div style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text-dim);text-align:center;padding:40px;border:1px dashed rgba(0,212,255,0.15);border-radius:8px;">[ NO BACKUPS FOUND IN SUPABASE ]</div>`;
+        return;
+      }
+
+      // Flag duplicates: same week_number + week_year
+      const seen = {};
+      allWeekBackups.forEach(w => {
+        const key = `${w.week_year}-${w.week_number}`;
+        if (!seen[key]) seen[key] = [];
+        seen[key].push(w.id);
+      });
+      const isDuplicate = (w) => seen[`${w.week_year}-${w.week_number}`].length > 1;
+
+      container.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
+      ${allWeekBackups.map(w => `
+        <div id="card-${w.id}" style="background:rgba(0,0,0,0.4);border:1px solid ${isDuplicate(w) ? 'rgba(255,107,53,0.5)' : 'var(--panel-border)'};border-radius:8px;padding:16px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;"
+          onmouseover="this.style.borderColor='var(--accent-cyan)';this.style.boxShadow='var(--glow-cyan)'"
+          onmouseout="this.style.borderColor='${isDuplicate(w) ? 'rgba(255,107,53,0.5)' : 'var(--panel-border)'}';this.style.boxShadow='none'">
+
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent-cyan),transparent);"></div>
+
+          ${isDuplicate(w) ? `<div style="position:absolute;top:8px;left:12px;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.4);border-radius:10px;padding:1px 7px;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--accent-orange);letter-spacing:1px;">DUPLICATE</div>` : ''}
+
+          <!-- DELETE BUTTON -->
+          <button onclick="event.stopPropagation(); deleteWeekBackup('${inlineArg(w.id)}')"
+            title="Delete this backup"
+            style="position:absolute;top:8px;right:10px;width:22px;height:22px;border-radius:50%;background:rgba(255,51,102,0.12);border:1px solid rgba(255,51,102,0.35);color:rgba(255,51,102,0.8);font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;padding:0;z-index:2;"
+            onmouseover="this.style.background='rgba(255,51,102,0.3)';this.style.color='#ff3366';this.style.borderColor='#ff3366'"
+            onmouseout="this.style.background='rgba(255,51,102,0.12)';this.style.color='rgba(255,51,102,0.8)';this.style.borderColor='rgba(255,51,102,0.35)'">
+            ×
+          </button>
+
+          <div onclick="loadWeekFromSupabase('${inlineArg(w.id)}')" style="padding-top:${isDuplicate(w) ? '14px' : '0'}">
+            <div style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--accent-cyan);letter-spacing:2px;margin-bottom:6px;padding-right:28px;">
+              ${w.week_label || 'Week ' + w.week_number}
+            </div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);margin-bottom:12px;">
+              ${new Date(w.backup_date).toLocaleString()}
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <div style="text-align:center;"><div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--text-primary);">${w.email_count || 0}</div><div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text-dim);">TOTAL</div></div>
+              <div style="text-align:center;"><div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--accent-green);">${w.sent_count || 0}</div><div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text-dim);">SENT</div></div>
+              <div style="text-align:center;"><div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--accent-cyan);">${w.received_count || 0}</div><div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text-dim);">INBOX</div></div>
+              <div style="text-align:center;"><div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--accent-red);">${w.urgent_count || 0}</div><div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text-dim);">URGENT</div></div>
+            </div>
+            <div style="margin-top:12px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--accent-cyan);letter-spacing:2px;opacity:0.7;">CLICK TO LOAD ›</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+    }
+    async function deleteWeekBackup(id) {
+      if (!supabaseClient) { showToast('⚠ Connect Supabase first'); return; }
+      if (!confirm('Delete this backup from Supabase?')) return;
+      try {
+        const res = await fetch(
+          `${supabaseClient.url}/rest/v1/weekly_email_backups?id=eq.${encodeURIComponent(id)}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'apikey': supabaseClient.key,
+              'Authorization': `Bearer ${supabaseClient.key}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            }
+          }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // Remove from local array and re-render
+        allWeekBackups = allWeekBackups.filter(w => String(w.id) !== String(id));
+        renderWeekCards();
+        populateCompareDropdowns();
+        if (activeHistoryRecord && String(activeHistoryRecord.id) === String(id)) clearHistoryView();
+        document.getElementById('badge-history').textContent = allWeekBackups.length;
+        showToast('✓ Backup deleted');
+      } catch (err) {
+        showToast('✗ Delete failed: ' + err.message);
+      }
+    }
+
+    async function loadWeekFromSupabase(id) {
+      // Show compare bar only if 2+ backups
+      if (allWeekBackups.length >= 2) {
+        document.getElementById('history-compare-bar').style.display = 'block';
+      }
+
+      if (!supabaseClient) return;
+      showToast('⏳ Loading week data...');
+
+      try {
+        const res = await fetch(
+          `${supabaseClient.url}/rest/v1/weekly_email_backups?id=eq.${encodeURIComponent(id)}&select=*`,
+          { headers: { 'apikey': supabaseClient.key, 'Authorization': `Bearer ${supabaseClient.key}` } }
+        );
+        if (!res.ok) throw new Error(await res.text());
+        const records = await res.json();
+        if (!records.length) throw new Error('Record not found');
+
+        activeHistoryRecord = records[0];
+        const rec = activeHistoryRecord;
+
+        // Parse raw_data — could be array or JSON string
+        let emails = [];
+        if (rec.raw_data) {
+          emails = typeof rec.raw_data === 'string' ? JSON.parse(rec.raw_data) : rec.raw_data;
+        }
+        historyEmails = emails.map((e, i) => ({ ...e, id: i }));
+        historyFilteredEmails = [...historyEmails];
+
+        console.log('[DEBUG] Loaded record id:', rec.id, 'backup_date:', rec.backup_date);
+        console.log('[DEBUG] historyEmails count:', historyEmails.length);
+        console.log('[DEBUG] historyEmails[0]:', historyEmails[0]);
+        const histWithBody = historyEmails.find(e => e.body && e.body.length > 10);
+        console.log('[DEBUG] first historyEmail WITH a non-trivial body:', histWithBody ? { subject: histWithBody.subject, bodyLen: histWithBody.body.length } : 'NONE FOUND - body missing after load!');
+
+        // Populate detail panel
+        document.getElementById('hist-week-title').textContent = rec.week_label || `Week ${rec.week_number}`;
+        document.getElementById('hist-week-range').textContent = `Year ${rec.week_year} · Backed up ${new Date(rec.backup_date).toLocaleString()}`;
+        document.getElementById('hist-total').textContent = rec.email_count || historyEmails.length;
+        document.getElementById('hist-sent').textContent = rec.sent_count || 0;
+        document.getElementById('hist-received').textContent = rec.received_count || 0;
+        document.getElementById('hist-urgent').textContent = rec.urgent_count || 0;
+        document.getElementById('hist-rfq').textContent = rec.rfq_count || 0;
+        document.getElementById('hist-backup-date').textContent = new Date(rec.backup_date).toLocaleDateString();
+
+        // AI Summary
+        const summaryEl = document.getElementById('hist-summary-body');
+        summaryEl.innerHTML = rec.ai_summary
+          ? formatAIText(rec.ai_summary)
+          : '<span style="color:var(--text-dim)">No AI summary was stored for this week.</span>';
+
+        // Actionables
+        const actEl = document.getElementById('hist-actions-body');
+        let acts = [];
+        if (rec.actionables) {
+          acts = typeof rec.actionables === 'string' ? JSON.parse(rec.actionables) : rec.actionables;
+        }
+        if (acts && acts.length) {
+          actEl.innerHTML = acts.map((a, i) => `
+        <div class="action-item">
+          <div class="action-header">
+            <div class="priority-badge priority-${a.priority || 'MEDIUM'}"></div>
+            <div class="action-title">${a.title || a}</div>
+            <span class="tag ${(a.priority || 'MEDIUM') === 'HIGH' ? 'urgent' : (a.priority || 'MEDIUM') === 'MEDIUM' ? 'rfq' : 'inbox'}" style="margin-left:auto;">${a.priority || 'MEDIUM'}</span>
+          </div>
+          <div class="action-body">${a.detail || ''}</div>
+          <div class="action-meta"><span>🏢 ${a.party || '—'}</span><span>ITEM #${String(i + 1).padStart(2, '0')}</span></div>
+        </div>
+      `).join('');
+        } else {
+          actEl.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:12px;color:var(--text-dim);text-align:center;padding:20px;">No actionables stored for this week.</div>';
+        }
+
+        renderHistEmailTable();
+        document.getElementById('history-detail').style.display = 'block';
+        switchHistTab('emails');
+        showToast(`✓ Loaded ${historyEmails.length} emails from ${rec.week_label}`);
+
+      } catch (err) {
+        showToast('✗ Load failed: ' + err.message);
+      }
+    }
+
+    function renderHistEmailTable() {
+      const tbody = document.getElementById('hist-email-tbody');
+      const label = document.getElementById('hist-email-count');
+      label.textContent = historyFilteredEmails.length + ' emails';
+
+      tbody.innerHTML = historyFilteredEmails.slice(0, 300).map(e => `
+    <tr class="clickable" onclick="toggleHistDetail(${e.id})">
+      <td>
+        <span class="tag ${e.type || 'inbox'}">${(e.type || 'INBOX').toUpperCase()}</span>
+        ${(e.category && e.category !== 'general') ? `<span class="tag ${e.category}" style="margin-left:4px;">${e.category.toUpperCase()}</span>` : ''}
+        ${e.isUrgent ? `<span class="tag urgent" style="margin-left:4px;">URGENT</span>` : ''}
+      </td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);white-space:nowrap;">${e.date || ''}</td>
+      <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.from || ''}">${extractName(e.from || '')}</td>
+      <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.to || ''}">${extractName(e.to || '')}</td>
+      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;" title="${e.subject || ''}">${e.subject || '(no subject)'}</td>
+    </tr>
+    <tr id="hist-detail-${e.id}"><td colspan="5" style="padding:0;">
+      <div class="email-detail" id="hist-detail-body-${e.id}" style="font-size:11px;">
+        <div style="padding:0 14px 8px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;">─ ARCHIVED BODY PREVIEW ─</div>
+        ${((e.body || e.preview || '(no body stored)')).toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+      </div>
+    </td></tr>
+  `).join('');
+    }
+
+    function toggleHistDetail(id) {
+      const el = document.getElementById(`hist-detail-body-${id}`);
+      if (el) el.classList.toggle('open');
+    }
+
+    function filterHistEmails() {
+      const q = document.getElementById('hist-search').value.toLowerCase();
+      const f = document.getElementById('hist-filter').value;
+      historyFilteredEmails = historyEmails.filter(e => {
+        const matchSearch = !q ||
+          (e.subject || '').toLowerCase().includes(q) ||
+          (e.from || '').toLowerCase().includes(q) ||
+          (e.to || '').toLowerCase().includes(q);
+        const matchFilter = f === 'all' || e.type === f || e.category === f ||
+          (f === 'urgent' && e.isUrgent);
+        return matchSearch && matchFilter;
+      });
+      renderHistEmailTable();
+      renderSupabaseVolumeChart();
+    }
+
+    function switchHistTab(tab) {
+      ['emails', 'summary', 'actions'].forEach(t => {
+        document.getElementById(`hist-pane-${t}`).style.display = t === tab ? 'block' : 'none';
+        const btn = document.getElementById(`hist-tab-${t}`);
+        if (btn) {
+          btn.style.background = t === tab ? 'rgba(0,212,255,0.1)' : 'rgba(0,0,0,0.3)';
+          btn.style.borderColor = t === tab ? 'var(--accent-cyan)' : 'var(--panel-border)';
+          btn.style.color = t === tab ? 'var(--accent-cyan)' : 'var(--text-secondary)';
+        }
+      });
+    }
+
+    function restoreWeekToMain() {
+      if (!historyEmails.length) { showToast('⚠ No archived emails loaded'); return; }
+      allEmails = historyEmails.map((e, i) => ({ ...e, id: i }));
+      filteredEmails = [...allEmails];
+      updateStats();
+      renderEmailTable();
+      renderTopContacts();
+      renderWeeklyView();
+      renderCharts();
+
+      if (activeHistoryRecord) {
+        aiSummary = activeHistoryRecord.ai_summary || '';
+        const summaryEl = document.getElementById('quick-summary');
+        if (aiSummary) {
+          summaryEl.innerHTML = `<div class="summary-block"><div class="summary-label">RESTORED AI SUMMARY — ${activeHistoryRecord.week_label}</div>${formatAIText(aiSummary.substring(0, 400))}...</div>`;
+        }
+        let acts = activeHistoryRecord.actionables || [];
+        if (typeof acts === 'string') acts = JSON.parse(acts);
+        actionables = Array.isArray(acts) ? acts : [];
+        renderActionables();
+        document.getElementById('badge-actions').textContent = actionables.length;
+        document.getElementById('action-count-label').textContent = actionables.length + ' action items';
+      }
+
+      switchView('dashboard');
+      showToast(`✓ Week restored to dashboard — ${allEmails.length} emails loaded`);
+    }
+
+    async function rerunAIOnHistory() {
+      if (!historyEmails.length) { showToast('⚠ Load a history week first'); return; }
+      // Temporarily swap in history emails then run analysis
+      const savedEmails = allEmails;
+      allEmails = historyEmails;
+      switchView('ai');
+      await runFullAnalysis();
+      allEmails = savedEmails;
+    }
+
+    function clearHistoryView() {
+      historyEmails = [];
+      historyFilteredEmails = [];
+      activeHistoryRecord = null;
+      document.getElementById('history-detail').style.display = 'none';
+      document.getElementById('hist-email-tbody').innerHTML = '';
+      showToast('History view cleared');
+    }
+
+    // ===== WEEK COMPARISON =====
+    function populateCompareDropdowns() {
+      ['compare-week-a', 'compare-week-b'].forEach((id, i) => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = allWeekBackups.map((w, idx) =>
+          `<option value="${w.id}" ${idx === i ? 'selected' : ''}>${w.week_label || 'Week ' + w.week_number}</option>`
+        ).join('');
+      });
+    }
+
+    async function runComparison() {
+      const idA = document.getElementById('compare-week-a').value;
+      const idB = document.getElementById('compare-week-b').value;
+      if (idA === idB) { showToast('⚠ Select two different weeks'); return; }
+
+      const wA = allWeekBackups.find(w => String(w.id) === String(idA));
+      const wB = allWeekBackups.find(w => String(w.id) === String(idB));
+      if (!wA || !wB) return;
+
+      const resultEl = document.getElementById('history-compare-result');
+      resultEl.style.display = 'block';
+
+      const metrics = [
+        { key: 'email_count', label: 'TOTAL EMAILS' },
+        { key: 'sent_count', label: 'SENT' },
+        { key: 'received_count', label: 'RECEIVED' },
+        { key: 'rfq_count', label: 'RFQs' },
+        { key: 'urgent_count', label: 'URGENT' },
+      ];
+
+      const rows = metrics.map(m => {
+        const a = wA[m.key] || 0, b = wB[m.key] || 0;
+        const diff = b - a;
+        const pct = a ? Math.round((diff / a) * 100) : (b ? 100 : 0);
+        const col = diff > 0 ? 'var(--accent-green)' : diff < 0 ? 'var(--accent-red)' : 'var(--text-dim)';
+        const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '—';
+        return `
+      <tr>
+        <td style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;">${m.label}</td>
+        <td style="font-family:'Orbitron',monospace;font-size:15px;font-weight:700;color:var(--accent-cyan);text-align:center;">${a}</td>
+        <td style="font-family:'Orbitron',monospace;font-size:15px;font-weight:700;color:var(--accent-orange);text-align:center;">${b}</td>
+        <td style="font-family:'Share Tech Mono',monospace;font-size:12px;color:${col};text-align:center;">
+          ${arrow} ${Math.abs(diff)} <span style="font-size:9px;">(${pct > 0 ? '+' : ''}${pct}%)</span>
+        </td>
+      </tr>`;
+      }).join('');
+
+      resultEl.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">WEEK vs WEEK COMPARISON</div>
+      </div>
+      <div class="panel-body">
+        <table class="email-table">
+          <thead><tr>
+            <th>METRIC</th>
+            <th style="text-align:center;color:var(--accent-cyan);">${wA.week_label || 'Week ' + wA.week_number}</th>
+            <th style="text-align:center;color:var(--accent-orange);">${wB.week_label || 'Week ' + wB.week_number}</th>
+            <th style="text-align:center;">CHANGE</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div style="margin-top:16px;padding:12px;background:rgba(0,212,255,0.04);border:1px solid var(--panel-border);border-radius:6px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-secondary);line-height:1.9;">
+          <span style="color:var(--accent-cyan);">◈ DELTA SUMMARY:</span>
+          Email volume ${(wB.email_count || 0) > (wA.email_count || 0) ? 'increased ▲' : 'decreased ▼'} by
+          ${Math.abs((wB.email_count || 0) - (wA.email_count || 0))} emails
+          (${wA.email_count ? Math.round(((wB.email_count - wA.email_count) / wA.email_count) * 100) : 0}%)
+          from ${wA.week_label || 'Week ' + wA.week_number} to ${wB.week_label || 'Week ' + wB.week_number}.
+          RFQ activity ${(wB.rfq_count || 0) >= (wA.rfq_count || 0) ? 'maintained or grew' : 'declined'}.
+          Urgent items ${(wB.urgent_count || 0) > (wA.urgent_count || 0) ? 'increased — review needed ⚠' : 'decreased or stable ✓'}.
+        </div>
+      </div>
+    </div>`;
+    }
+
+    // Try to auto-detect if there's already data from a preloaded CSV
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        // Show the welcome message with sample data counts
+        document.getElementById('stat-week').textContent = `WK ${currentWeek}`;
+        document.getElementById('week-range').textContent = `Mar 03 – Mar 11, 2026 · Week 11`;
+      }, 2000);
+    });
+  </script>
+</body>
+
+</html>
